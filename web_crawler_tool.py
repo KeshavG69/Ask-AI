@@ -497,7 +497,7 @@ class WebCrawlerTool(Toolkit):
 
         return "\n".join(output)
 
-    def crawl_selected_urls(self, urls: str) -> str:
+    def crawl_selected_urls(self, urls: List[str]) -> str:
         """
         Crawl specific URLs selected by the agent after site structure discovery.
         
@@ -505,7 +505,7 @@ class WebCrawlerTool(Toolkit):
         automatic discovery - giving the agent full control over what gets crawled.
         
         Args:
-            urls (str): Comma-separated URLs to crawl (e.g., "https://site.com/docs,https://site.com/faq")
+            urls (List[str]): List of URLs to crawl (e.g., ["https://site.com/docs", "https://site.com/faq"])
             
         Returns:
             str: Formatted content from crawled pages
@@ -513,7 +513,7 @@ class WebCrawlerTool(Toolkit):
         try:
             # Parse and validate URLs
             url_list = []
-            for url in urls.split(","):
+            for url in urls:
                 url = url.strip()
                 if url:
                     validated_url = self._ensure_valid_url(url)
@@ -544,47 +544,6 @@ class WebCrawlerTool(Toolkit):
         """Helper method to run simple crawling in a new event loop."""
         return asyncio.run(self._crawl_multiple_urls(urls))
 
-    def crawl_websites(self, urls: str) -> str:
-        """
-        Crawl multiple websites with intelligent URL discovery from sitemaps and llms.txt.
-
-        This tool automatically discovers additional relevant URLs to provide comprehensive coverage.
-
-        Args:
-            urls (str): Comma-separated URLs to crawl (e.g., "https://site.com,https://site.com/help")
-
-        Returns:
-            str: Formatted content and discovered links from crawled pages
-        """
-        try:
-            # Parse and validate URLs
-            url_list = []
-            for url in urls.split(","):
-                url = url.strip()
-                if url:
-                    validated_url = self._ensure_valid_url(url)
-                    if validated_url and self.is_allowed_domain(validated_url):
-                        url_list.append(validated_url)
-
-            if not url_list:
-                return "❌ No valid URLs provided"
-
-            print(f"🔍 Starting intelligent crawling for {len(url_list)} URLs...")
-
-            # Handle async crawling properly
-            try:
-                loop = asyncio.get_running_loop()
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(self._run_smart_crawling, url_list)
-                    results = future.result()
-            except RuntimeError:
-                results = asyncio.run(self._smart_crawl_multiple_urls(url_list))
-
-            return self._format_results(results)
-
-        except Exception as e:
-            return f"❌ Error in crawl_websites: {str(e)}"
 
     def _run_smart_crawling(self, urls):
         """Helper method to run smart crawling in a new event loop."""

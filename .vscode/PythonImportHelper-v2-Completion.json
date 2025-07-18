@@ -84,6 +84,14 @@
         "documentation": {}
     },
     {
+        "label": "ReasoningTools",
+        "importPath": "agno.tools.reasoning",
+        "description": "agno.tools.reasoning",
+        "isExtraImport": true,
+        "detail": "agno.tools.reasoning",
+        "documentation": {}
+    },
+    {
         "label": "load_dotenv",
         "importPath": "dotenv",
         "description": "dotenv",
@@ -286,7 +294,7 @@
         "kind": 2,
         "importPath": "main",
         "description": "main",
-        "peekOfCode": "def create_web_support_agent(starting_urls: list):\n    \"\"\"Create a web support agent with crawling capabilities.\"\"\"\n    # Create the crawler tool - it will automatically extract allowed domains from starting URLs\n    crawler_tool = WebCrawlerTool(starting_urls=starting_urls)\n    # Create agent with intelligent instructions\n    agent = Agent(\n        model=OpenAIChat(id=\"gpt-4.1\", api_key=os.getenv(\"OPENAI_API_KEY\")),\n        tools=[crawler_tool],\n        description=f\"You are an agent that answers user queries based exclusively on content from the starting URLs: {', '.join(starting_urls)}. The starting URLs serve only as the content source - you crawl them to get information and answer questions based on that content.\",\n        instructions=[",
+        "peekOfCode": "def create_web_support_agent(starting_urls: list):\n    \"\"\"Create a web support agent with crawling capabilities.\"\"\"\n    # Create the crawler tool - it will automatically extract allowed domains from starting URLs\n    crawler_tool = WebCrawlerTool(starting_urls=starting_urls)\n    # Create agent with intelligent instructions\n    agent = Agent(\n        model=OpenAIChat(id=\"gpt-4.1\", api_key=os.getenv(\"OPENAI_API_KEY\")),\n        tools=[crawler_tool,ReasoningTools()],\n        description=f\"You are an agent that answers user queries based exclusively on content from the starting URLs: {', '.join(starting_urls)}. The starting URLs serve only as the content source - you crawl them to get information and answer questions based on that content.\",\n        instructions=[",
         "detail": "main",
         "documentation": {}
     },
@@ -295,7 +303,7 @@
         "kind": 2,
         "importPath": "main",
         "description": "main",
-        "peekOfCode": "def demo_web_support_bot():\n    \"\"\"Demo the web support bot with example websites.\"\"\"\n    print(\"=== Web Support Bot Demo ===\\n\")\n    # Example: Create agent for a hypothetical e-commerce site\n    starting_urls = [\"http://keshavg69.github.io/PortfolioWebsite/\"]\n    agent = create_web_support_agent(starting_urls)\n    # Get the automatically extracted domains for display\n    allowed_domains = agent.tools[0].allowed_domains\n    print(\"🤖 Web Support Agent created!\")\n    print(f\"📝 Starting URLs: {', '.join(starting_urls)}\")",
+        "peekOfCode": "def demo_web_support_bot():\n    \"\"\"Demo the web support bot with example websites.\"\"\"\n    print(\"=== Web Support Bot Demo ===\\n\")\n    # Example: Create agent for a hypothetical e-commerce site\n    starting_urls = [\"https://docs.agno.com/introduction\"]\n    agent = create_web_support_agent(starting_urls)\n    # Get the automatically extracted domains for display\n    allowed_domains = agent.tools[0].allowed_domains\n    print(\"🤖 Web Support Agent created!\")\n    print(f\"📝 Starting URLs: {', '.join(starting_urls)}\")",
         "detail": "main",
         "documentation": {}
     },
