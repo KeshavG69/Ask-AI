@@ -1,4 +1,5 @@
 from agno.agent import Agent
+from agno.models.openrouter import OpenRouter
 from agno.models.openai import OpenAIChat
 from web_crawler_tool import WebCrawlerTool
 from agno.tools.reasoning import ReasoningTools
@@ -16,7 +17,7 @@ def create_web_support_agent(starting_urls: list):
 
     # Create agent with intelligent instructions
     agent = Agent(
-        model=OpenAIChat(id="gpt-4.1", api_key=os.getenv("OPENAI_API_KEY")),
+        model=OpenAIChat(id="gpt-4.1-mini", api_key=os.getenv("OPENAI_API_KEY")),
         tools=[crawler_tool,ReasoningTools()],
         description=f"You are an agent that answers user queries based exclusively on content from the starting URLs: {', '.join(starting_urls)}. The starting URLs serve only as the content source - you crawl them to get information and answer questions based on that content.",
         instructions=[
@@ -36,22 +37,24 @@ def create_web_support_agent(starting_urls: list):
             "🔒 CRITICAL RULES:",
             "- ONLY use information from scraped content",
             "- NEVER use external knowledge or training data",
-            "- If info not found in scraped content, say so explicitly",
+            "- Provide only the information that is available from scraped content",
             "- Quote directly from scraped content when possible",
             "",
             # ANTI-HALLUCINATION
             "🚫 ANTI-HALLUCINATION RULES:",
             "- NEVER invent, assume, or guess information that is not explicitly stated in scraped content",
             "- NEVER fill knowledge gaps with general knowledge or training data",
-            "- If asked about something not found in scraped content, clearly state 'This information is not available in the scraped content'",
+            "- Only provide information that is explicitly found in the scraped content",
             "- Do not make logical inferences beyond what is directly stated",
-            "- When uncertain about any detail, explicitly say 'The scraped content does not specify this'",
             "- NEVER provide approximate, estimated, or 'typical' information",
-            "- If only partial information is available, clearly indicate what is missing",
+            "- If only partial information is available, provide only what is available without mentioning what's missing",
             "- Do not extrapolate or expand on limited information",
             "",
             # RESPONSE STYLE
             "💬 RESPONSE STYLE:",
+            "- Provide detailed, comprehensive answers that fully address the user's question",
+            "- Be helpful and thorough in your explanations using all available information",
+            "- Give complete, informative responses that provide maximum value to the user",
             "- Provide direct answers without mentioning scraping, crawling, or website analysis",
             "- Do not tell users about the technical process of gathering information",
             "- Skip opening statements like 'I'll help you find...' or 'Let me search...'",
@@ -61,7 +64,6 @@ def create_web_support_agent(starting_urls: list):
             "- Do not mention the documentation source at the end of responses",
             "- No disclaimers about information sources in closing statements",
             "- End responses immediately after providing the requested information",
-            "- Give concise, direct responses that answer the question immediately",
             "",
             # REASONING TOOL USAGE
             "🧠 USE REASONING TOOL:",
@@ -86,9 +88,10 @@ def create_web_support_agent(starting_urls: list):
         debug_mode=True,
         add_context=True,
         context={
-            "answer_groundedness": f"CRITICAL REQUIREMENT: Every single piece of information in your answers must come exclusively from content you actually scraped from these specific websites: {', '.join(starting_urls)}. You are absolutely forbidden from using any external knowledge, training data, general facts, or assumptions. If information is not found in the scraped content, explicitly state 'This information was not found in the scraped website content.' Never fill knowledge gaps with external information.",
-            "site_structure_and_imp_info": WebCrawlerTool(starting_urls=starting_urls).discover_site_structure(starting_urls),
+            "answer_groundedness": f"CRITICAL REQUIREMENT: Every single piece of information in your answers must come exclusively from content you actually scraped from these specific websites: {', '.join(starting_urls)}. You are absolutely forbidden from using any external knowledge, training data, general facts, or assumptions. Only provide information that is available from the scraped content. Never fill knowledge gaps with external information.",
+            "site_structure_and_imp_info": crawler_tool.discover_site_structure(starting_urls),
         },
+        add_datetime_to_instructions=True
     )
 
     return agent
@@ -100,7 +103,7 @@ def demo_web_support_bot():
     print("=== Web Support Bot Demo ===\n")
 
     # Example: Create agent for a hypothetical e-commerce site
-    starting_urls = ["https://docs.agno.com/introduction"]
+    starting_urls = ["https://www.cricbuzz.com/"]
 
     agent = create_web_support_agent(starting_urls)
 
@@ -114,7 +117,7 @@ def demo_web_support_bot():
 
     # Example questions
     questions = [
-        "create a agent which uses web scraper  to answer questions only from a particular website using jina",
+        "tell me about the   india vs england 2nd test match",
         # This should be refused
     ]
 
