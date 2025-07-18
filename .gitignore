@@ -179,7 +179,7 @@ model_cache/
 logs/
 
 # IDE and editor files
-.vscode/
+.vscode
 .idea/
 *.swp
 *.swo

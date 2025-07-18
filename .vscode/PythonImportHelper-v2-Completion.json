@@ -76,22 +76,6 @@
         "documentation": {}
     },
     {
-        "label": "WebCrawlerTool",
-        "importPath": "web_crawler_tool",
-        "description": "web_crawler_tool",
-        "isExtraImport": true,
-        "detail": "web_crawler_tool",
-        "documentation": {}
-    },
-    {
-        "label": "WebCrawlerTool",
-        "importPath": "web_crawler_tool",
-        "description": "web_crawler_tool",
-        "isExtraImport": true,
-        "detail": "web_crawler_tool",
-        "documentation": {}
-    },
-    {
         "label": "ReasoningTools",
         "importPath": "agno.tools.reasoning",
         "description": "agno.tools.reasoning",
@@ -114,15 +98,6 @@
         "importPath": "asyncio",
         "description": "asyncio",
         "detail": "asyncio",
-        "documentation": {}
-    },
-    {
-        "label": "time",
-        "kind": 6,
-        "isExtraImport": true,
-        "importPath": "time",
-        "description": "time",
-        "detail": "time",
         "documentation": {}
     },
     {
