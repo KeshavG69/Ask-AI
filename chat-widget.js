@@ -21,13 +21,13 @@
     let isInitialized = false;
     let markedLoaded = false;
     
-    // 🍌🦍 DYNAMIC SCRIPT LOADING WITH APE ENERGY!
+    // Dynamic script loading for Marked.js
     function loadMarkedJS() {
         return new Promise((resolve, reject) => {
             // Check if already loaded
             if (typeof marked !== 'undefined') {
                 markedLoaded = true;
-                console.log('🍌 Marked.js already available!');
+                console.log('Marked.js already available');
                 resolve();
                 return;
             }
@@ -37,11 +37,11 @@
             script.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
             script.onload = () => {
                 markedLoaded = true;
-                console.log('🦍 Marked.js loaded successfully!');
+                console.log('Marked.js loaded successfully');
                 resolve();
             };
             script.onerror = () => {
-                console.error('❌ Failed to load Marked.js');
+                console.error('Failed to load Marked.js');
                 reject(new Error('Failed to load Marked.js'));
             };
             
@@ -782,7 +782,7 @@
             return 'session_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
         }
         
-        // 🚀 RELIABLE MARKDOWN PARSING WITH MARKED.JS - FIXED TABLE RENDERING!
+        // Reliable markdown parsing with Marked.js - fixed table rendering
         function parseMarkdown(text) {
             if (!text) return '';
             
@@ -793,7 +793,7 @@
                     return text.replace(/\n/g, '<br>');
                 }
                 
-                // Use marked with clean configuration - no custom renderer!
+                // Use marked with clean configuration - no custom renderer
                 let html = marked.parse(text, {
                     breaks: true,        // Handle line breaks properly
                     gfm: true,          // GitHub Flavored Markdown (tables!)
@@ -801,7 +801,7 @@
                     smartypants: false  // Don't convert quotes/dashes
                 });
                 
-                // 🎯 Add our CSS class to tables via post-processing (SAFE!)
+                // Add our CSS class to tables via post-processing
                 html = html.replace(/<table>/g, '<table class="markdown-table">');
                 
                 return html;
@@ -847,7 +847,7 @@
             return { messageDiv, aiResponseDiv };
         }
         
-        // 🍌🦍 FAKE STREAMING WITH SYNCHRONIZED COORDINATION!
+        // Synchronized streaming with content coordination
         let activeStreamingTimeouts = [];
         let streamingCoordinator = {
             reasoningActive: false,
@@ -886,7 +886,7 @@
                     element.innerHTML = fullText;
                     streamingCoordinator.reasoningActive = false;
                     
-                    // 🎯 RELEASE BUFFERED CONTENT AFTER REASONING COMPLETES!
+                    // Release buffered content after reasoning completes
                     if (streamingCoordinator.waitingForReasoning && streamingCoordinator.currentAiResponseDiv) {
                         releaseBufferedContent();
                     }
@@ -898,13 +898,13 @@
             addNextWord();
         }
         
-        // 🎯 BUFFERED CONTENT RELEASE SYSTEM
+        // Buffered content release system
         function releaseBufferedContent() {
             if (!streamingCoordinator.currentAiResponseDiv || !streamingCoordinator.waitingForReasoning) {
                 return;
             }
             
-            console.log('🎯 Releasing buffered content after reasoning completion!');
+            console.log('Releasing buffered content after reasoning completion');
             
             // Create new streamData with buffered content
             const finalStreamData = {
@@ -924,7 +924,7 @@
             streamingCoordinator.currentAiResponseDiv = null;
         }
         
-        // 🍌 APPEND ONLY NEW REASONING STEP - NO REBUILDING!
+        // Append only new reasoning step - no rebuilding
         function appendNewReasoningStep(aiResponseDiv, newStep, isFirstStep) {
             let reasoningContainer = aiResponseDiv.querySelector('.reasoning-container');
             
@@ -983,9 +983,9 @@
                     stepElement.innerHTML = stepText;
                 }
                 
-                // 🎯 FAKE STREAM ONLY THE NEW STEP!
+                // Stream only the new step
                 streamTextWordByWord(stepElement, stepElement.innerHTML, () => {
-                    console.log(`🍌 New reasoning step streamed: ${newStep.title}`);
+                    console.log(`New reasoning step streamed: ${newStep.title}`);
                 });
                 
                 reasoningContentInner.appendChild(stepElement);
@@ -993,7 +993,7 @@
             }
         }
         
-        // 🚀 UPDATE ONLY CONTENT - DON'T REBUILD REASONING!
+        // Update only content - don't rebuild reasoning
         function updateContentOnly(aiResponseDiv, content) {
             // Check if content section already exists
             let contentSection = aiResponseDiv.querySelector('.content-section');
@@ -1019,7 +1019,7 @@
             scrollToBottom();
         }
         
-        // 🗂️ ADD ONLY SOURCES - DON'T REBUILD REASONING!
+        // Add only sources - don't rebuild reasoning
         function addSourcesOnly(aiResponseDiv, sources) {
             if (!sources || sources.length === 0) return;
             
@@ -1070,7 +1070,7 @@
             scrollToBottom();
         }
         
-        // 🎯 DIRECT UPDATE WITHOUT BUFFERING (for final release)
+        // Direct update without buffering (for final release)
         function updateAIResponseDirectly(aiResponseDiv, streamData) {
             // Don't clear - just add content section to existing reasoning
             
@@ -1130,11 +1130,11 @@
             scrollToBottom();
         }
 
-        // Update AI response sections with FAKE STREAMING auto-reasoning behavior
+        // Update AI response sections with streaming auto-reasoning behavior
         function updateAIResponse(aiResponseDiv, streamData) {
             aiResponseDiv.innerHTML = '';
             
-            // Reasoning section (collapsible dropdown with FAKE STREAMING!)
+            // Reasoning section (collapsible dropdown with streaming)
             if (streamData.reasoning && streamData.reasoning.length > 0) {
                 const reasoningContainer = document.createElement('div');
                 reasoningContainer.className = 'reasoning-container';
@@ -1142,7 +1142,7 @@
                 const reasoningToggle = document.createElement('div');
                 reasoningToggle.className = 'reasoning-toggle';
                 
-                // 🎯 AUTO-BEHAVIOR: Auto-expand during reasoning streaming, auto-collapse when done
+                // Auto-behavior: Auto-expand during reasoning streaming, auto-collapse when done
                 const shouldAutoExpand = streamData.isStreaming && streamData.reasoning.length > 0;
                 const shouldAutoCollapse = !streamData.isStreaming && streamData.content;
                 
@@ -1172,25 +1172,25 @@
                 const reasoningContentInner = document.createElement('div');
                 reasoningContentInner.className = 'reasoning-content-inner';
                 
-                // 🍌 FAKE STREAMING MAGIC HAPPENS HERE!
+                // Streaming text processing
                 const fullReasoningText = streamData.reasoning.map(step => 
                     `<strong>${step.title}</strong><br>${step.thought || step.reasoning || ''}`
                 ).join('<br><br>');
                 
-                // If we're streaming reasoning and it's new content, do FAKE STREAMING!
+                // If we're streaming reasoning and it's new content, do streaming
                 const reasoningKey = `reasoning_${streamData.reasoning.length}_${streamData.reasoning.map(s => s.title).join('_')}`;
                 
                 if (streamData.isStreaming && !reasoningContentInner.dataset.streamingKey) {
                     reasoningContentInner.dataset.streamingKey = reasoningKey;
                     
-                    // 🦍 START FAKE STREAMING WITH APE ENERGY!
+                    // Start streaming
                     clearActiveStreaming(); // Clear any previous streaming
                     streamTextWordByWord(
                         reasoningContentInner, 
                         fullReasoningText,
                         () => {
                             // Streaming complete callback
-                            console.log('🍌 Fake reasoning streaming complete!');
+                            console.log('Reasoning streaming complete');
                         }
                     );
                 } else {
@@ -1303,7 +1303,7 @@
             }
         }
         
-        // 🚀 OPTIMIZED MESSAGE SENDING WITH BACKEND STREAMING
+        // Optimized message sending with backend streaming and smooth loader
         async function sendMessage() {
             const message = messageInput.value.trim();
             if (!message || isLoading) return;
@@ -1314,11 +1314,13 @@
             messageInput.value = '';
             messageInput.style.height = 'auto';
             
-            // Show loading
+            // Show loading and track first content arrival
             showLoading();
+            console.log('Loader activated for smooth transition');
             
             // Prepare AI response container
             let aiResponseContainer = null;
+            let loaderHidden = false; // Track loader state for smooth transition
             let streamData = {
                 reasoning: [],
                 content: '',
@@ -1344,8 +1346,8 @@
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
-                // Hide loading and prepare response container
-                hideLoading();
+                // Don't hide loader yet - wait for first content for smooth transition
+                console.log('Connection established, keeping loader alive for seamless transition');
                 const responseContainer = addAIResponse();
                 aiResponseContainer = responseContainer.aiResponseDiv;
                 
@@ -1367,6 +1369,13 @@
                                 // 🎯 SYNCHRONIZED CHUNK PROCESSING WITH BUFFERING - NO DUPLICATION!
                                 switch (chunk.type) {
                                     case 'content':
+                                        // Hide loader on first content arrival for smooth transition
+                                        if (!loaderHidden) {
+                                            hideLoading();
+                                            loaderHidden = true;
+                                            console.log('Loader smoothly transitioned to content');
+                                        }
+                                        
                                         streamData.content = chunk.full_content || chunk.text;
                                         streamData.isStreaming = true;
                                         
@@ -1385,10 +1394,17 @@
                                         
                                     case 'reasoning':
                                         if (chunk.step) {
-                                            streamData.reasoning.push(chunk.step);
-                                            console.log(`🧠 Added reasoning step: ${chunk.step.title}`);
+                                            // Hide loader on first reasoning step arrival for smooth transition
+                                            if (!loaderHidden) {
+                                                hideLoading();
+                                                loaderHidden = true;
+                                                console.log('Loader smoothly transitioned to reasoning');
+                                            }
                                             
-                                            // 🍌 STREAM ONLY THE NEW STEP - DON'T REBUILD EVERYTHING!
+                                            streamData.reasoning.push(chunk.step);
+                                            console.log(`Added reasoning step: ${chunk.step.title}`);
+                                            
+                                            // Stream only the new step - don't rebuild everything
                                             appendNewReasoningStep(aiResponseContainer, chunk.step, streamData.reasoning.length === 1);
                                         }
                                         break;
@@ -1519,13 +1535,13 @@
             // Merge configuration
             config = { ...defaultConfig, ...userConfig };
             
-            // 🍌🦍 APE ENERGY: Load Marked.js first!
-            console.log('🦍 Loading Marked.js with ape energy...');
+            // Load Marked.js for professional markdown parsing
+            console.log('Loading Marked.js for enhanced markdown support...');
             try {
                 await loadMarkedJS();
-                console.log('🍌 Marked.js ready for action!');
+                console.log('Marked.js loaded successfully');
             } catch (error) {
-                console.warn('⚠️ Marked.js failed to load, using fallback parsing:', error);
+                console.warn('Marked.js failed to load, using fallback parsing:', error);
             }
             
             // Wait for DOM to be ready
@@ -1534,13 +1550,13 @@
                     createWidget();
                     initializeWidget();
                     isInitialized = true;
-                    console.log('🚀 Chat widget initialized with Marked.js support!');
+                    console.log('Chat widget initialized with Marked.js support');
                 });
             } else {
                 createWidget();
                 initializeWidget();
                 isInitialized = true;
-                console.log('🚀 Chat widget initialized with Marked.js support!');
+                console.log('Chat widget initialized with Marked.js support');
             }
         },
         
