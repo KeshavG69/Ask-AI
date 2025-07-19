@@ -164,38 +164,6 @@
         "documentation": {}
     },
     {
-        "label": "AsyncGenerator",
-        "importPath": "typing",
-        "description": "typing",
-        "isExtraImport": true,
-        "detail": "typing",
-        "documentation": {}
-    },
-    {
-        "label": "Dict",
-        "importPath": "typing",
-        "description": "typing",
-        "isExtraImport": true,
-        "detail": "typing",
-        "documentation": {}
-    },
-    {
-        "label": "Any",
-        "importPath": "typing",
-        "description": "typing",
-        "isExtraImport": true,
-        "detail": "typing",
-        "documentation": {}
-    },
-    {
-        "label": "List",
-        "importPath": "typing",
-        "description": "typing",
-        "isExtraImport": true,
-        "detail": "typing",
-        "documentation": {}
-    },
-    {
         "label": "List",
         "importPath": "typing",
         "description": "typing",
@@ -245,22 +213,6 @@
     },
     {
         "label": "RunResponse",
-        "importPath": "agno.run.response",
-        "description": "agno.run.response",
-        "isExtraImport": true,
-        "detail": "agno.run.response",
-        "documentation": {}
-    },
-    {
-        "label": "RunResponse",
-        "importPath": "agno.run.response",
-        "description": "agno.run.response",
-        "isExtraImport": true,
-        "detail": "agno.run.response",
-        "documentation": {}
-    },
-    {
-        "label": "RunEvent",
         "importPath": "agno.run.response",
         "description": "agno.run.response",
         "isExtraImport": true,
@@ -591,15 +543,6 @@
         "documentation": {}
     },
     {
-        "label": "split_agent_output",
-        "kind": 2,
-        "importPath": "data_split",
-        "description": "data_split",
-        "peekOfCode": "def split_agent_output():\n    \"\"\"Split the AI Chat Widget API Response file into manageable chunks\"\"\"\n    input_file = \"/Users/keshav/Downloads/AI Chat Widget API Response.txt\"\n    try:\n        print(f\"Reading file: {input_file}\")\n        # Read all lines from the file\n        with open(input_file, 'r', encoding='utf-8') as f:\n            lines = f.readlines()\n        total_lines = len(lines)\n        print(f\"Total lines in file: {total_lines}\")",
-        "detail": "data_split",
-        "documentation": {}
-    },
-    {
         "label": "app",
         "kind": 5,
         "importPath": "server",
@@ -615,33 +558,6 @@
         "description": "simple_processor",
         "peekOfCode": "logger = logging.getLogger(__name__)\nasync def simple_process_stream(raw_stream: AsyncGenerator) -> AsyncGenerator[str, None]:\n    \"\"\"\n    🍌 BANANA PROCESSOR - Now with REAL CONTENT EXTRACTION + NO REPETITION!\n    \"\"\"\n    try:\n        logger.info(\"🍌 BANANA PROCESSOR ACTIVATED - EXTRACTING REAL CONTENT!\")\n        content_buffer = \"\"\n        reasoning_steps = []\n        sent_reasoning_steps = []  # Track what we've already sent to prevent repetition",
         "detail": "simple_processor",
-        "documentation": {}
-    },
-    {
-        "label": "StreamProcessor",
-        "kind": 6,
-        "importPath": "stream_processor",
-        "description": "stream_processor",
-        "peekOfCode": "class StreamProcessor:\n    \"\"\"\n    🔥 THE STREAMING MONSTER\n    Processes complex agno streams and emits clean, simple chunks for frontend\n    \"\"\"\n    def __init__(self):\n        self.reasoning_steps = []\n        self.content_buffer = \"\"\n        self.crawled_urls = []\n        self.is_streaming = False",
-        "detail": "stream_processor",
-        "documentation": {}
-    },
-    {
-        "label": "logger",
-        "kind": 5,
-        "importPath": "stream_processor",
-        "description": "stream_processor",
-        "peekOfCode": "logger = logging.getLogger(__name__)\nclass StreamProcessor:\n    \"\"\"\n    🔥 THE STREAMING MONSTER\n    Processes complex agno streams and emits clean, simple chunks for frontend\n    \"\"\"\n    def __init__(self):\n        self.reasoning_steps = []\n        self.content_buffer = \"\"\n        self.crawled_urls = []",
-        "detail": "stream_processor",
-        "documentation": {}
-    },
-    {
-        "label": "stream_processor",
-        "kind": 5,
-        "importPath": "stream_processor",
-        "description": "stream_processor",
-        "peekOfCode": "stream_processor = StreamProcessor()\nasync def process_agent_stream(raw_stream: AsyncGenerator) -> AsyncGenerator[str, None]:\n    \"\"\"\n    🎯 MAIN ENTRY POINT\n    Process raw agno stream into clean chunks\n    \"\"\"\n    async for processed_chunk in stream_processor.process_stream(raw_stream):\n        yield processed_chunk",
-        "detail": "stream_processor",
         "documentation": {}
     },
     {
