@@ -1,50 +1,64 @@
 # Ask-AI
 
-An intelligent web crawling AI agent built with the Agno framework that answers questions based exclusively on scraped website content. Ask-AI combines advanced web crawling capabilities with GPT-powered reasoning to provide accurate, source-based answers.
+A streaming AI Chat Widget API that answers questions based exclusively on content crawled from specified websites. Built with FastAPI and powered by GPT-4, Ask-AI provides real-time streaming responses with intelligent web crawling capabilities.
 
 ## 🎯 Key Features
 
-- **Source-Only Answers**: ALL responses are based EXCLUSIVELY on scraped website content—never external knowledge or training data
-- **Intelligent Web Crawling**: Uses crawl4ai and Playwright to extract clean content from multiple URLs simultaneously
-- **Smart Reasoning**: Integrates reasoning tools to analyze questions and plan crawling strategies
-- **Auto Domain Detection**: Automatically extracts and restricts crawling to relevant domains for security
-- **Link Discovery**: Discovers and explores related pages intelligently based on question relevance
-- **Anti-Hallucination**: Strict rules prevent invention or assumption of information not found in scraped content
-- **Interactive & Demo Modes**: Choose between guided demo or specify your own URLs and domains
-- **Comprehensive Error Handling**: Gracefully handles failed crawls, timeouts, and invalid URLs
+- **Streaming API**: Real-time Server-Sent Events (SSE) streaming for immediate response delivery
+- **Source-Only Answers**: ALL responses based EXCLUSIVELY on crawled website content—never external knowledge
+- **Smart Web Crawling**: Uses crawl4ai and Playwright for JavaScript-heavy sites and dynamic content
+- **llms.txt Discovery**: Automatically discovers AI-optimized content from llms.txt files
+- **Multi-URL Support**: Crawl and analyze content from multiple websites simultaneously
+- **Domain Security**: Automatic domain restriction for secure crawling
+- **Widget-Ready**: CORS-enabled API perfect for website integration
+- **Anti-Hallucination**: Strict rules prevent invention of information not found in crawled content
+- **Real-time Processing**: Stream reasoning steps, crawling progress, and final responses
 
 ## 🏗️ Architecture
 
 ### Core Components
 
-1. **Main Agent** (`main.py`)
-   - Orchestrates the entire question-answering process
-   - Uses GPT-4 for intelligent decision making and reasoning
-   - Manages crawling strategy and response generation
+1. **FastAPI Server** (`server.py`)
+   - Main web server with CORS middleware for widget embedding
+   - Health endpoints and API documentation
+
+2. **Chat API** (`app.py`)
+   - Streaming chat endpoint (`/chat`) with Server-Sent Events
+   - Request validation and session management
+   - Real-time response processing
+
+3. **AI Agent** (`agent.py`)
+   - Creates web support agents using OpenAI GPT-4
+   - Integrates reasoning tools for intelligent decision making
    - Enforces strict source-only information rules
 
-2. **Web Crawler Tool** (`web_crawler_tool.py`)
-   - Handles async crawling of multiple URLs
-   - Extracts clean, readable content using crawl4ai
-   - Discovers and filters relevant links
-   - Manages domain restrictions and security
+4. **Web Crawler Tool** (`tool.py`)
+   - Sophisticated web crawling with crawl4ai and Playwright
+   - Automatic llms.txt discovery for AI-optimized content
+   - Domain-restricted crawling for security
+   - Link discovery and intelligent URL selection
 
-3. **Test Suite**
-   - `test_tool.py`: Basic tool functionality tests
-   - `test_enhanced_crawler.py`: Advanced crawling scenario tests
+5. **Stream Processor** (`simple_processor.py`)
+   - Processes agent responses into clean streaming chunks
+   - Extracts reasoning steps, crawling progress, and content
+   - Prevents duplicate content in streams
 
-### Workflow
+6. **Chat Widget** (`chat-widget.js`, `chat-widget.html`)
+   - Frontend components for easy website integration
+   - Real-time streaming interface
+
+### API Workflow
 
 ```
-User Question → Agent Reasoning → URL Selection → Content Crawling → Analysis → Source-Based Answer
-     ↑                                                                           ↓
-     └─────────────── Additional Crawling (if needed) ←─── Completeness Check ←─┘
+POST /chat → Agent Creation → Site Discovery → URL Selection → Content Crawling → AI Analysis → Streaming Response
+     ↑                                                                                    ↓
+     └─── Session Management ←──── Real-time Updates ←──── Stream Processing ←────┘
 ```
 
 ## 🚀 Installation
 
 ### Prerequisites
-- Python 3.13+ (specified in pyproject.toml)
+- Python 3.13+
 - OpenAI API key
 
 ### Setup
@@ -66,7 +80,7 @@ User Question → Agent Reasoning → URL Selection → Content Crawling → Ana
 
    **Or using pip**
    ```bash
-   pip install agno>=1.7.4 crawl4ai>=0.7.1 playwright>=1.53.0 python-dotenv
+   pip install agno>=1.7.5 crawl4ai>=0.7.1 fastapi>=0.116.1 playwright>=1.53.0 uvicorn>=0.32.1
    ```
 
 3. **Install Playwright browsers** (required for crawl4ai)
@@ -82,46 +96,145 @@ User Question → Agent Reasoning → URL Selection → Content Crawling → Ana
 
 ## 💻 Usage
 
-### Quick Start
+### Start the Server
 
 ```bash
-python main.py
+python server.py
 ```
 
-Choose between:
-1. **Demo Mode**: Uses cricbuzz.com for testing cricket-related queries
-2. **Interactive Mode**: Specify your own URLs and ask custom questions
+The API will be available at `http://localhost:8000`
 
-### Demo Mode Example
+- **API Documentation**: `http://localhost:8000/docs`
+- **Health Check**: `http://localhost:8000/health`
 
+### API Endpoints
+
+#### POST /chat - Streaming Chat
+
+Send questions about website content and receive streaming responses.
+
+**Request Body:**
+```json
+{
+  "urls": ["https://docs.example.com", "https://help.example.com"],
+  "query": "What are your API rate limits?",
+  "session_id": "unique-session-id",
+  "company_name": "YourCompany"
+}
 ```
-❓ Question: Tell me about the India vs England 2nd test match
 
-🤖 Agent Response:
-Based on the latest information from Cricbuzz:
+**Response:** Server-Sent Events stream with:
+- **Reasoning steps**: AI decision-making process
+- **Crawling progress**: Real-time crawling updates
+- **Content chunks**: Streaming response content
+- **Completion**: Final response with sources
 
-**Match Status**: India vs England, 2nd Test
-**Venue**: Lord's Cricket Ground, London
-**Current Status**: England 218/4 (Day 2, 2nd Session)
-...
+#### GET /health - Health Check
 
-*All information sourced directly from cricbuzz.com*
+```json
+{
+  "status": "healthy",
+  "service": "AI Chat Widget API"
+}
 ```
 
-### Interactive Mode Example
+### Chat Widget Integration
+
+Include the chat widget in your website:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Chat Widget Demo</title>
+</head>
+<body>
+    <!-- Your website content -->
+    
+    <!-- Include the chat widget -->
+    <script src="chat-widget.js"></script>
+    <link rel="stylesheet" href="chat-widget.html">
+</body>
+</html>
+```
+
+### API Usage Examples
+
+#### Python Example
 
 ```python
-from agno.agent import Agent
-from agno.models.openai import OpenAIChat
-from web_crawler_tool import WebCrawlerTool
-import os
+import requests
+import json
 
-# Create crawler for your specific domain
-starting_urls = ["https://docs.yourcompany.com"]
-agent = create_web_support_agent(starting_urls)
+# Streaming chat request
+def stream_chat(urls, query, session_id, company_name):
+    response = requests.post(
+        "http://localhost:8000/chat",
+        json={
+            "urls": urls,
+            "query": query,
+            "session_id": session_id,
+            "company_name": company_name
+        },
+        stream=True,
+        headers={'Accept': 'text/event-stream'}
+    )
+    
+    for line in response.iter_lines():
+        if line:
+            if line.startswith(b'data: '):
+                try:
+                    data = json.loads(line[6:])
+                    print(f"Type: {data['type']}")
+                    if data['type'] == 'content':
+                        print(f"Content: {data['text']}")
+                except json.JSONDecodeError:
+                    pass
 
-# Ask questions
-agent.print_response("What are your API rate limits?")
+# Example usage
+stream_chat(
+    urls=["https://docs.company.com", "https://help.company.com"],
+    query="What are your pricing plans?",
+    session_id="user-123",
+    company_name="CompanyBot"
+)
+```
+
+#### JavaScript Example
+
+```javascript
+const eventSource = new EventSource('/chat', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+        urls: ['https://docs.example.com'],
+        query: 'How do I get started?',
+        session_id: 'session-456',
+        company_name: 'ExampleBot'
+    })
+});
+
+eventSource.onmessage = function(event) {
+    const data = JSON.parse(event.data);
+    
+    switch(data.type) {
+        case 'reasoning':
+            console.log('AI Reasoning:', data.step.title);
+            break;
+        case 'crawling':
+            console.log('Crawling:', data.urls);
+            break;
+        case 'content':
+            console.log('Response:', data.text);
+            break;
+        case 'completion':
+            console.log('Final Answer:', data.final_content);
+            console.log('Sources:', data.sources);
+            break;
+    }
+};
 ```
 
 ## ⚙️ Configuration
@@ -134,64 +247,93 @@ Create a `.env` file in the project root:
 OPENAI_API_KEY=your_openai_api_key_here
 ```
 
-### Agent Instructions
+### Agent Customization
 
-The agent follows strict guidelines to ensure accuracy:
+The AI agent follows strict guidelines for accuracy:
 
-- **Source Exclusivity**: Only information from scraped content is used
-- **Anti-Hallucination**: No invention, assumption, or gap-filling with external knowledge
+- **Source Exclusivity**: Only uses information from crawled content
+- **Anti-Hallucination**: No invention or assumption of information
 - **Reasoning Integration**: Uses reasoning tools to plan and verify responses
-- **URL Selection**: Intelligently matches URLs to question topics
+- **Markdown Formatting**: Structured, readable responses
+- **Recency Priority**: Prioritizes most recent information
 
-### Customization
+### Server Configuration
 
-You can customize the agent for specific use cases:
+Modify `server.py` for custom configuration:
 
 ```python
-# E-commerce support
-starting_urls = ["https://shop.com", "https://shop.com/help"]
-
-# Documentation bot  
-starting_urls = ["https://docs.api.com", "https://docs.api.com/reference"]
-
-# Company information
-starting_urls = ["https://company.com/about", "https://company.com/contact"]
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "server:app", 
+        host="0.0.0.0",      # Change host
+        port=8080,           # Change port
+        reload=True,
+        log_level="info"
+    )
 ```
 
 ## 🧪 Testing
 
-Run the test suite to verify functionality:
+### Manual Testing
+
+1. **Start the server**:
+   ```bash
+   python server.py
+   ```
+
+2. **Test with curl**:
+   ```bash
+   curl -X POST "http://localhost:8000/chat" \
+        -H "Content-Type: application/json" \
+        -d '{
+          "urls": ["https://docs.python.org"],
+          "query": "How do I install Python packages?",
+          "session_id": "test-session",
+          "company_name": "TestBot"
+        }'
+   ```
+
+3. **Visit API docs**: `http://localhost:8000/docs`
+
+### Load Testing
+
+For production deployment, test with multiple concurrent requests:
 
 ```bash
-# Basic tool tests
-python test_tool.py
+# Install wrk for load testing
+brew install wrk  # macOS
+# or apt-get install wrk  # Linux
 
-# Enhanced crawler tests
-python test_enhanced_crawler.py
+# Run load test
+wrk -t12 -c400 -d30s -s post.lua http://localhost:8000/chat
 ```
 
 ## 🔧 Technical Details
 
 ### Dependencies
 
-- **agno**: AI agent framework for orchestration
-- **crawl4ai**: Advanced web crawling and content extraction
-- **playwright**: Browser automation for JavaScript-heavy sites
-- **openai**: GPT-4 integration for reasoning and responses
+- **agno**: AI agent framework for orchestration and reasoning
+- **crawl4ai**: Advanced web crawling with JavaScript support
+- **playwright**: Browser automation for dynamic content
+- **fastapi**: Modern async Python web framework
+- **uvicorn**: ASGI server for FastAPI
 
-### Security Features
+### Smart Crawling Features
 
-- **Domain Restriction**: Automatically limits crawling to specified domains
-- **Rate Limiting**: Respects robots.txt and implements crawling delays
-- **Content Filtering**: Only processes publicly accessible content
-- **Error Isolation**: Failed crawls don't compromise other operations
+- **llms.txt Discovery**: Automatically finds AI-optimized content files
+- **Domain Restriction**: Security through allowed domain filtering
+- **Async Crawling**: Multiple URLs processed simultaneously
+- **Content Optimization**: Extracts clean, readable text from HTML
+- **Link Discovery**: Intelligent exploration of related pages
 
 ### Performance Considerations
 
-- **Async Crawling**: Multiple URLs processed simultaneously
-- **Intelligent Caching**: Avoids redundant crawls of same content
-- **Selective Crawling**: Only crawls URLs relevant to the question
-- **Content Optimization**: Extracts clean, readable text from HTML
+- **Streaming Responses**: Immediate user feedback with Server-Sent Events
+- **Async Processing**: Non-blocking request handling
+- **Content Caching**: Avoids redundant crawling operations
+- **Selective Crawling**: Only processes URLs relevant to the question
+- **Error Isolation**: Failed crawls don't compromise other operations
 
 ## 🛠️ Development
 
@@ -199,22 +341,33 @@ python test_enhanced_crawler.py
 
 ```
 Ask-AI/
-├── main.py                    # Main application entry point
-├── web_crawler_tool.py        # Core crawling functionality
-├── test_tool.py              # Basic functionality tests
-├── test_enhanced_crawler.py   # Advanced crawling tests
-├── pyproject.toml            # Project configuration
-├── .env                      # Environment variables (create this)
-├── .gitignore               # Git ignore rules
-└── README.md                # This file
+├── server.py                 # FastAPI server entry point
+├── app.py                    # Chat API endpoints and streaming
+├── agent.py                  # AI agent creation and configuration
+├── tool.py                   # Web crawler tool implementation
+├── simple_processor.py       # Stream processing logic
+├── chat-widget.js           # Frontend chat widget JavaScript
+├── chat-widget.html         # Frontend chat widget HTML/CSS
+├── test.html                # Test page for widget integration
+├── pyproject.toml           # Project dependencies and configuration
+├── .env                     # Environment variables (create this)
+├── .gitignore              # Git ignore rules
+└── README.md               # This file
 ```
+
+### Adding New Features
+
+1. **New Tools**: Add to `agent.py` tools list
+2. **API Endpoints**: Extend `app.py` router
+3. **Stream Processing**: Modify `simple_processor.py`
+4. **Frontend**: Update `chat-widget.js`
 
 ### Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
-4. Add tests for new functionality
+4. Test with the API
 5. Commit your changes (`git commit -m 'Add amazing feature'`)
 6. Push to the branch (`git push origin feature/amazing-feature`)
 7. Open a Pull Request
@@ -222,30 +375,68 @@ Ask-AI/
 ## 🚫 Limitations
 
 - **Content Scope**: Limited to publicly accessible web pages
-- **JavaScript**: May have issues with heavily JavaScript-dependent SPAs
+- **JavaScript Dependency**: Requires Playwright for dynamic content
 - **API Dependency**: Requires OpenAI API access (GPT-4)
 - **Rate Limits**: Subject to website rate limiting and robots.txt
 - **Real-time Data**: Information is only as current as the last crawl
+- **CORS**: Currently allows all origins (configure for production)
 
 ## 📝 Use Cases
 
-### Customer Support Bot
-```python
-starting_urls = ["https://support.company.com", "https://help.company.com/faq"]
-# Answers customer questions based on official support documentation
+### Customer Support Chatbot
+```json
+{
+  "urls": ["https://support.company.com", "https://help.company.com/faq"],
+  "query": "How do I reset my password?",
+  "session_id": "support-session",
+  "company_name": "SupportBot"
+}
 ```
 
-### Technical Documentation Assistant
-```python
-starting_urls = ["https://docs.api.com", "https://api.reference.com"]
-# Helps developers with API questions using official documentation
+### Documentation Assistant
+```json
+{
+  "urls": ["https://docs.api.com", "https://api.reference.com"],
+  "query": "What are the authentication requirements?",
+  "session_id": "dev-session",
+  "company_name": "DocsBot"
+}
 ```
 
 ### Product Information Agent
-```python
-starting_urls = ["https://products.company.com", "https://specs.company.com"]
-# Provides product details based on official specifications
+```json
+{
+  "urls": ["https://products.company.com", "https://specs.company.com"],
+  "query": "What are the technical specifications?",
+  "session_id": "product-session",
+  "company_name": "ProductBot"
+}
 ```
+
+## 🚀 Deployment
+
+### Docker Deployment
+
+```dockerfile
+FROM python:3.13-slim
+
+WORKDIR /app
+COPY . .
+
+RUN pip install -r requirements.txt
+RUN playwright install
+
+EXPOSE 8000
+CMD ["python", "server.py"]
+```
+
+### Production Considerations
+
+- Configure CORS origins for your domain
+- Use environment variables for API keys
+- Set up proper logging and monitoring
+- Consider rate limiting for API endpoints
+- Use HTTPS in production
 
 ## 📄 License
 
@@ -254,15 +445,16 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🤝 Support
 
 - **Issues**: Report bugs via GitHub Issues
-- **Documentation**: Check this README and inline code comments
-- **API Keys**: Ensure your OpenAI API key has sufficient credits
+- **API Documentation**: Available at `/docs` when server is running
+- **Examples**: Check `test.html` for widget integration examples
 
 ## 🔗 Related Projects
 
 - [Agno Framework](https://github.com/agno-ai/agno) - AI agent orchestration
 - [Crawl4AI](https://github.com/unclecode/crawl4ai) - Advanced web crawling
+- [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
 - [Playwright](https://playwright.dev/) - Browser automation
 
 ---
 
-**Ask-AI**: Bringing accuracy and transparency to AI-powered question answering through source-based responses.
+**Ask-AI**: Real-time streaming AI chat widget powered by intelligent web crawling and source-based responses.
