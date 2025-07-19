@@ -52,6 +52,14 @@
         "documentation": {}
     },
     {
+        "label": "Agent",
+        "importPath": "agno.agent",
+        "description": "agno.agent",
+        "isExtraImport": true,
+        "detail": "agno.agent",
+        "documentation": {}
+    },
+    {
         "label": "OpenRouter",
         "importPath": "agno.models.openrouter",
         "description": "agno.models.openrouter",
@@ -69,10 +77,10 @@
     },
     {
         "label": "WebCrawlerTool",
-        "importPath": "web_crawler_tool",
-        "description": "web_crawler_tool",
+        "importPath": "tool",
+        "description": "tool",
         "isExtraImport": true,
-        "detail": "web_crawler_tool",
+        "detail": "tool",
         "documentation": {}
     },
     {
@@ -84,11 +92,204 @@
         "documentation": {}
     },
     {
+        "label": "AsyncGenerator",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "cast",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "List",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "List",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "AsyncGenerator",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "cast",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "List",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Tuple",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Dict",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "RunEvent",
+        "importPath": "agno.run.response",
+        "description": "agno.run.response",
+        "isExtraImport": true,
+        "detail": "agno.run.response",
+        "documentation": {}
+    },
+    {
+        "label": "RunResponse",
+        "importPath": "agno.run.response",
+        "description": "agno.run.response",
+        "isExtraImport": true,
+        "detail": "agno.run.response",
+        "documentation": {}
+    },
+    {
+        "label": "RunEvent",
+        "importPath": "agno.run.response",
+        "description": "agno.run.response",
+        "isExtraImport": true,
+        "detail": "agno.run.response",
+        "documentation": {}
+    },
+    {
+        "label": "RunResponse",
+        "importPath": "agno.run.response",
+        "description": "agno.run.response",
+        "isExtraImport": true,
+        "detail": "agno.run.response",
+        "documentation": {}
+    },
+    {
         "label": "load_dotenv",
         "importPath": "dotenv",
         "description": "dotenv",
         "isExtraImport": true,
         "detail": "dotenv",
+        "documentation": {}
+    },
+    {
+        "label": "datetime",
+        "importPath": "datetime",
+        "description": "datetime",
+        "isExtraImport": true,
+        "detail": "datetime",
+        "documentation": {}
+    },
+    {
+        "label": "logging",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "logging",
+        "description": "logging",
+        "detail": "logging",
+        "documentation": {}
+    },
+    {
+        "label": "APIRouter",
+        "importPath": "fastapi",
+        "description": "fastapi",
+        "isExtraImport": true,
+        "detail": "fastapi",
+        "documentation": {}
+    },
+    {
+        "label": "HTTPException",
+        "importPath": "fastapi",
+        "description": "fastapi",
+        "isExtraImport": true,
+        "detail": "fastapi",
+        "documentation": {}
+    },
+    {
+        "label": "FastAPI",
+        "importPath": "fastapi",
+        "description": "fastapi",
+        "isExtraImport": true,
+        "detail": "fastapi",
+        "documentation": {}
+    },
+    {
+        "label": "StreamingResponse",
+        "importPath": "fastapi.responses",
+        "description": "fastapi.responses",
+        "isExtraImport": true,
+        "detail": "fastapi.responses",
+        "documentation": {}
+    },
+    {
+        "label": "UUID",
+        "importPath": "uuid",
+        "description": "uuid",
+        "isExtraImport": true,
+        "detail": "uuid",
+        "documentation": {}
+    },
+    {
+        "label": "BaseModel",
+        "importPath": "pydantic",
+        "description": "pydantic",
+        "isExtraImport": true,
+        "detail": "pydantic",
+        "documentation": {}
+    },
+    {
+        "label": "create_web_support_agent",
+        "importPath": "agent",
+        "description": "agent",
+        "isExtraImport": true,
+        "detail": "agent",
+        "documentation": {}
+    },
+    {
+        "label": "CORSMiddleware",
+        "importPath": "fastapi.middleware.cors",
+        "description": "fastapi.middleware.cors",
+        "isExtraImport": true,
+        "detail": "fastapi.middleware.cors",
+        "documentation": {}
+    },
+    {
+        "label": "router",
+        "importPath": "app",
+        "description": "app",
+        "isExtraImport": true,
+        "detail": "app",
         "documentation": {}
     },
     {
@@ -116,30 +317,6 @@
         "importPath": "xml.etree.ElementTree",
         "description": "xml.etree.ElementTree",
         "detail": "xml.etree.ElementTree",
-        "documentation": {}
-    },
-    {
-        "label": "List",
-        "importPath": "typing",
-        "description": "typing",
-        "isExtraImport": true,
-        "detail": "typing",
-        "documentation": {}
-    },
-    {
-        "label": "Tuple",
-        "importPath": "typing",
-        "description": "typing",
-        "isExtraImport": true,
-        "detail": "typing",
-        "documentation": {}
-    },
-    {
-        "label": "Dict",
-        "importPath": "typing",
-        "description": "typing",
-        "isExtraImport": true,
-        "detail": "typing",
         "documentation": {}
     },
     {
@@ -275,37 +452,64 @@
     {
         "label": "create_web_support_agent",
         "kind": 2,
-        "importPath": "main",
-        "description": "main",
-        "peekOfCode": "def create_web_support_agent(starting_urls: list):\n    \"\"\"Create a web support agent with crawling capabilities.\"\"\"\n    # Create the crawler tool - it will automatically extract allowed domains from starting URLs\n    crawler_tool = WebCrawlerTool(starting_urls=starting_urls)\n    # Create agent with intelligent instructions\n    agent = Agent(\n        model=OpenAIChat(id=\"gpt-4.1-mini\", api_key=os.getenv(\"OPENAI_API_KEY\")),\n        tools=[crawler_tool,ReasoningTools()],\n        description=f\"You are an agent that answers user queries based exclusively on content from the starting URLs: {', '.join(starting_urls)}. The starting URLs serve only as the content source - you crawl them to get information and answer questions based on that content.\",\n        instructions=[",
-        "detail": "main",
+        "importPath": "agent",
+        "description": "agent",
+        "peekOfCode": "def create_web_support_agent(starting_urls: List,company_name:str):\n    \"\"\"Create a web support agent with crawling capabilities.\"\"\"\n    # Create the crawler tool - it will automatically extract allowed domains from starting URLs\n    crawler_tool = WebCrawlerTool(starting_urls=starting_urls)\n    # Create agent with intelligent instructions\n    agent = Agent(\n        model=OpenAIChat(id=\"gpt-4.1\", api_key=os.getenv(\"OPENAI_API_KEY\")),\n        tools=[crawler_tool,ReasoningTools()],\n        description=f\"You are an agent that answers user queries based exclusively on content from the starting URLs: {', '.join(starting_urls)}. The starting URLs serve only as the content source - you crawl them to get information and answer questions based on that content.\",\n        instructions=[",
+        "detail": "agent",
         "documentation": {}
     },
     {
-        "label": "demo_web_support_bot",
-        "kind": 2,
-        "importPath": "main",
-        "description": "main",
-        "peekOfCode": "def demo_web_support_bot():\n    \"\"\"Demo the web support bot with example websites.\"\"\"\n    print(\"=== Web Support Bot Demo ===\\n\")\n    # Example: Create agent for a hypothetical e-commerce site\n    starting_urls = [\"https://www.cricbuzz.com/\"]\n    agent = create_web_support_agent(starting_urls)\n    # Get the automatically extracted domains for display\n    allowed_domains = agent.tools[0].allowed_domains\n    print(\"🤖 Web Support Agent created!\")\n    print(f\"📝 Starting URLs: {', '.join(starting_urls)}\")",
-        "detail": "main",
+        "label": "ChatRequest",
+        "kind": 6,
+        "importPath": "app",
+        "description": "app",
+        "peekOfCode": "class ChatRequest(BaseModel):\n    urls: List[str]\n    query: str\n    session_id: str\n    company_name: str\nasync def stream_chat_response(\n    query: str,\n    agent: Agent,\n) -> AsyncGenerator:\n    \"\"\"",
+        "detail": "app",
         "documentation": {}
     },
     {
-        "label": "interactive_mode",
+        "label": "logger",
+        "kind": 5,
+        "importPath": "app",
+        "description": "app",
+        "peekOfCode": "logger = logging.getLogger(__name__)\nrouter = APIRouter(tags=[\"chat_agents\"])\n# Request Schema\nclass ChatRequest(BaseModel):\n    urls: List[str]\n    query: str\n    session_id: str\n    company_name: str\nasync def stream_chat_response(\n    query: str,",
+        "detail": "app",
+        "documentation": {}
+    },
+    {
+        "label": "router",
+        "kind": 5,
+        "importPath": "app",
+        "description": "app",
+        "peekOfCode": "router = APIRouter(tags=[\"chat_agents\"])\n# Request Schema\nclass ChatRequest(BaseModel):\n    urls: List[str]\n    query: str\n    session_id: str\n    company_name: str\nasync def stream_chat_response(\n    query: str,\n    agent: Agent,",
+        "detail": "app",
+        "documentation": {}
+    },
+    {
+        "label": "split_agent_output",
         "kind": 2,
-        "importPath": "main",
-        "description": "main",
-        "peekOfCode": "def interactive_mode():\n    \"\"\"Interactive mode where user can specify their own URLs and ask questions.\"\"\"\n    print(\"=== Interactive Web Support Bot ===\\n\")\n    # Get starting URLs from user\n    print(\"Enter starting URLs (comma-separated):\")\n    urls_input = input(\"> \")\n    starting_urls = [url.strip() for url in urls_input.split(\",\") if url.strip()]\n    if not starting_urls:\n        print(\"❌ No valid URLs provided. Using example.com as default.\")\n        starting_urls = [\"https://example.com\"]",
-        "detail": "main",
+        "importPath": "data_split",
+        "description": "data_split",
+        "peekOfCode": "def split_agent_output():\n    \"\"\"Split the AI Chat Widget API Response file into manageable chunks\"\"\"\n    input_file = \"/Users/keshav/Downloads/AI Chat Widget API Response.txt\"\n    try:\n        print(f\"Reading file: {input_file}\")\n        # Read all lines from the file\n        with open(input_file, 'r', encoding='utf-8') as f:\n            lines = f.readlines()\n        total_lines = len(lines)\n        print(f\"Total lines in file: {total_lines}\")",
+        "detail": "data_split",
+        "documentation": {}
+    },
+    {
+        "label": "app",
+        "kind": 5,
+        "importPath": "server",
+        "description": "server",
+        "peekOfCode": "app = FastAPI(\n    title=\"AI Chat Widget API\",\n    description=\"Streaming AI chat API for website integration\",\n    version=\"1.0.0\"\n)\n# Add CORS middleware for cross-origin requests (essential for widget embedding)\napp.add_middleware(\n    CORSMiddleware,\n    allow_origins=[\"*\"],  # Allow all origins for widget embedding\n    allow_credentials=True,",
+        "detail": "server",
         "documentation": {}
     },
     {
         "label": "WebCrawlerTool",
         "kind": 6,
-        "importPath": "web_crawler_tool",
-        "description": "web_crawler_tool",
+        "importPath": "tool",
+        "description": "tool",
         "peekOfCode": "class WebCrawlerTool(Toolkit):\n    \"\"\"Simple web crawler tool that returns content and links for agent decision making.\"\"\"\n    def __init__(self, starting_urls: List[str] = None, max_links_per_page: int = 50):\n        super().__init__()\n        self.starting_urls = starting_urls or []\n        self.allowed_domains = self._extract_domains_from_urls(self.starting_urls)\n        self.max_links_per_page = max_links_per_page\n        self.register(self.crawl_selected_urls)\n    def _extract_domains_from_urls(self, urls: List[str]) -> List[str]:\n        \"\"\"Extract unique domains from a list of URLs.\"\"\"",
-        "detail": "web_crawler_tool",
+        "detail": "tool",
         "documentation": {}
     }
 ]

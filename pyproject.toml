@@ -7,5 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "agno>=1.7.4",
     "crawl4ai>=0.7.1",
+    "fastapi>=0.116.1",
     "playwright>=1.53.0",
+    "uvicorn>=0.32.1",
 ]

@@ -1,0 +1,50 @@
+  "run_id": "0b36b2a3-c155-45ce-be61-ba2e869e8982",
+  "session_id": "16d946c4-805d-43d4-ba52-1339d60128e5",
+  "content": " the",
+  "content_type": "str",
+  "thinking": ""
+}{
+  "created_at": 1752855297,
+  "event": "RunResponseContent",
+  "agent_id": "4020f5b1-8dc0-4845-b63d-7349abe0e426",
+  "run_id": "0b36b2a3-c155-45ce-be61-ba2e869e8982",
+  "session_id": "16d946c4-805d-43d4-ba52-1339d60128e5",
+  "content": " Ag",
+  "content_type": "str",
+  "thinking": ""
+}{
+  "created_at": 1752855297,
+  "event": "RunResponseContent",
+  "agent_id": "4020f5b1-8dc0-4845-b63d-7349abe0e426",
+  "run_id": "0b36b2a3-c155-45ce-be61-ba2e869e8982",
+  "session_id": "16d946c4-805d-43d4-ba52-1339d60128e5",
+  "content": "no",
+  "content_type": "str",
+  "thinking": ""
+}{
+  "created_at": 1752855297,
+  "event": "RunResponseContent",
+  "agent_id": "4020f5b1-8dc0-4845-b63d-7349abe0e426",
+  "run_id": "0b36b2a3-c155-45ce-be61-ba2e869e8982",
+  "session_id": "16d946c4-805d-43d4-ba52-1339d60128e5",
+  "content": " framework",
+  "content_type": "str",
+  "thinking": ""
+}{
+  "created_at": 1752855297,
+  "event": "RunResponseContent",
+  "agent_id": "4020f5b1-8dc0-4845-b63d-7349abe0e426",
+  "run_id": "0b36b2a3-c155-45ce-be61-ba2e869e8982",
+  "session_id": "16d946c4-805d-43d4-ba52-1339d60128e5",
+  "content": ".",
+  "content_type": "str",
+  "thinking": ""
+}{
+  "created_at": 1752855297,
+  "event": "RunCompleted",
+  "agent_id": "4020f5b1-8dc0-4845-b63d-7349abe0e426",
+  "run_id": "0b36b2a3-c155-45ce-be61-ba2e869e8982",
+  "session_id": "16d946c4-805d-43d4-ba52-1339d60128e5",
+  "content": "To create an agent that tells about a website using Firecrawl with Agno, you can use the FirecrawlTools in an Agno agent. Here is an example approach:\n\n1. Set up your environment variables with your API keys:\n```bash\nexport FIRECRAWL_API_KEY=xxx\nexport OPENAI_API_KEY=xxx\n```\n\n2. Install the required libraries:\n```bash\npip install -U firecrawl openai agno\n```\n\n3. Write a Python script using Agno's Agent and FirecrawlTools to create the agent and print the response about the website:\n\n```python\nfrom agno.agent import Agent\nfrom agno.tools.firecrawl import FirecrawlTools\n\nagent = Agent(\n    tools=[FirecrawlTools(scrape=False, crawl=True)],\n    show_tool_calls=True,\n    markdown=True,\n)\n\nagent.print_response(\"Summarize this https://finance.yahoo.com/\")\n```\n\n4. Run the script (on Mac or Windows):\n```bash\npython cookbook/tools/firecrawl_tools.py\n```\n\nThis will create an agent that uses Firecrawl to crawl the web and summarizes information about the given website URL.\n\nThe FirecrawlTools can be configured with `scrape` and `crawl` flags; here, `scrape=False` and `crawl=True` indicates it should crawl with Firecrawl.\n\nThis is the method to build an agent that tells about a website using Firecrawl within the Agno framework.",
+  "content_type": "str"
+}

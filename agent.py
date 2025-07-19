@@ -1,15 +1,18 @@
 from agno.agent import Agent
 from agno.models.openrouter import OpenRouter
 from agno.models.openai import OpenAIChat
-from web_crawler_tool import WebCrawlerTool
+from tool import WebCrawlerTool
 from agno.tools.reasoning import ReasoningTools
 import os
+from typing import AsyncGenerator,cast,List
+from agno.run.response import RunEvent, RunResponse
 from dotenv import load_dotenv
+from datetime import datetime
 
 load_dotenv()
 
 
-def create_web_support_agent(starting_urls: list):
+def create_web_support_agent(starting_urls: List,company_name:str):
     """Create a web support agent with crawling capabilities."""
 
     # Create the crawler tool - it will automatically extract allowed domains from starting URLs
@@ -17,13 +20,22 @@ def create_web_support_agent(starting_urls: list):
 
     # Create agent with intelligent instructions
     agent = Agent(
-        model=OpenAIChat(id="gpt-4.1-mini", api_key=os.getenv("OPENAI_API_KEY")),
+        model=OpenAIChat(id="gpt-4.1", api_key=os.getenv("OPENAI_API_KEY")),
         tools=[crawler_tool,ReasoningTools()],
         description=f"You are an agent that answers user queries based exclusively on content from the starting URLs: {', '.join(starting_urls)}. The starting URLs serve only as the content source - you crawl them to get information and answer questions based on that content.",
         instructions=[
             # CORE PURPOSE
             f"You answer user queries using ONLY content scraped from these starting URLs: {', '.join(starting_urls)}",
             "The starting URLs have no other role - they are simply your content source.",
+            "",
+            # RECENCY PRIORITY
+            "🕒 RECENCY PRIORITY:",
+            "- Always prioritize the most recent and up-to-date information available from scraped content",
+            "- Look for publication dates, last updated timestamps, and version information in content",
+            "- When multiple sources contain similar information, prefer the one with the most recent date",
+            "- Actively search for content from pages likely to contain recent information (news, updates, changelogs)",
+            "- If information appears outdated, clearly indicate this in your response",
+            "- Include publication dates or 'last updated' information when available in the scraped content",
             "",
             # WORKFLOW
             "🔍 WORKFLOW:",
@@ -82,6 +94,27 @@ def create_web_support_agent(starting_urls: list):
             "- Prioritize llms.txt URLs (AI-optimized)",
             "- Crawl 2-4 URLs at a time",
             "- Keep exploring until you have complete information",
+            """<format_rules> Write a well-formatted answer that is clear, structured, and optimized for readability using Markdown headers, lists, and text. Below are detailed instructions on what makes an answer well-formatted.
+
+    Answer Start: - Begin your answer with a few sentences that provide a summary of the overall answer. - NEVER start the answer with a header. - NEVER start by explaining to the user what you are doing.
+
+    Headings and sections: - Use Level 2 headers (##) for sections. (format as “## Text”) - If necessary, use bolded text (**) for subsections within these sections. (format as “**Text**”) - Use single new lines for list items and double new lines for paragraphs. - Paragraph text: Regular size, no bold - NEVER start the answer with a Level 2 header or bolded text
+
+    List Formatting: - Use only flat lists for simplicity. - Avoid nesting lists, instead create a markdown table. - Prefer unordered lists. Only use ordered lists (numbered) when presenting ranks or if it otherwise make sense to do so. - NEVER mix ordered and unordered lists and do NOT nest them together. Pick only one, generally preferring unordered lists. - NEVER have a list with only one single solitary bullet
+
+    Tables for Comparisons: - When comparing things (vs), format the comparison as a Markdown table instead of a list. It is much more readable when comparing items or features. - Ensure that table headers are properly defined for clarity. - Tables are preferred over long lists.
+
+    Emphasis and Highlights: - Use bolding to emphasize specific words or phrases where appropriate (e.g. list items). - Bold text sparingly, primarily for emphasis within paragraphs. - Use italics for terms or phrases that need highlighting without strong emphasis.
+
+    Code Snippets: - Include code snippets using Markdown code blocks. - Use the appropriate language identifier for syntax highlighting.
+
+    Mathematical Expressions - Wrap all math expressions in LaTeX using $$ $$ for inline and $$ $$ for block formulas. For example: $$x⁴ = x — 3$$ - To cite a formula add citations to the end, for example$$ \sin(x) $$ or $$x²-2$$. - Never use $ or $$ to render LaTeX, even if it is present in the Query. - Never use unicode to render math expressions, ALWAYS use LaTeX. - Never use the \label instruction for LaTeX.
+
+    Quotations: - Use Markdown blockquotes to include any relevant quotes that support or supplement your answer.
+
+    Answer End: - Wrap up the answer with a few sentences that are a general summary.
+
+    </format_rules>"""
         ],
         show_tool_calls=True,
         markdown=True,
@@ -90,111 +123,41 @@ def create_web_support_agent(starting_urls: list):
         context={
             "answer_groundedness": f"CRITICAL REQUIREMENT: Every single piece of information in your answers must come exclusively from content you actually scraped from these specific websites: {', '.join(starting_urls)}. You are absolutely forbidden from using any external knowledge, training data, general facts, or assumptions. Only provide information that is available from the scraped content. Never fill knowledge gaps with external information.",
             "site_structure_and_imp_info": crawler_tool.discover_site_structure(starting_urls),
+            "current_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         },
-        add_datetime_to_instructions=True
+        add_datetime_to_instructions=True,
+        num_history_responses=4,
+        user_id=company_name,
+        telemetry=False
     )
 
     return agent
 
 
-def demo_web_support_bot():
-    """Demo the web support bot with example websites."""
-
-    print("=== Web Support Bot Demo ===\n")
-
-    # Example: Create agent for a hypothetical e-commerce site
-    starting_urls = ["https://www.cricbuzz.com/"]
-
-    agent = create_web_support_agent(starting_urls)
-
-    # Get the automatically extracted domains for display
-    allowed_domains = agent.tools[0].allowed_domains
-
-    print("🤖 Web Support Agent created!")
-    print(f"📝 Starting URLs: {', '.join(starting_urls)}")
-    print(f"🌐 Auto-detected allowed domains: {', '.join(allowed_domains)}")
-    print("\n" + "=" * 50 + "\n")
-
-    # Example questions
-    questions = [
-        "tell me about the   india vs england 2nd test match",
-        # This should be refused
-    ]
-
-    for i, question in enumerate(questions, 1):
-        print(f"❓ Question {i}: {question}")
-        print("-" * 40)
-
-        try:
-            agent.print_response(question)
-        except Exception as e:
-            print(f"Error: {e}")
-
-        print("\n" + "=" * 50 + "\n")
 
 
-def interactive_mode():
-    """Interactive mode where user can specify their own URLs and ask questions."""
+async def stream_agent_response(
+    query: str, 
+    agent: Agent, 
+) -> AsyncGenerator:
+    try:
 
-    print("=== Interactive Web Support Bot ===\n")
-
-    # Get starting URLs from user
-    print("Enter starting URLs (comma-separated):")
-    urls_input = input("> ")
-    starting_urls = [url.strip() for url in urls_input.split(",") if url.strip()]
-
-    if not starting_urls:
-        print("❌ No valid URLs provided. Using example.com as default.")
-        starting_urls = ["https://example.com"]
-
-    # Create agent - domains will be auto-extracted
-    agent = create_web_support_agent(starting_urls)
-
-    # Get the automatically extracted domains for display
-    allowed_domains = agent.tools[0].allowed_domains
-
-    print(f"\n🤖 Web Support Agent created!")
-    print(f"📝 Starting URLs: {', '.join(starting_urls)}")
-    print(f"🌐 Auto-detected allowed domains: {', '.join(allowed_domains)}")
-    print("\n" + "=" * 50)
-    print("Ask questions about the website(s). Type 'quit' to exit.\n")
-
-    while True:
-        question = input("❓ Your question: ").strip()
-
-        if question.lower() in ["quit", "exit", "q"]:
-            print("👋 Goodbye!")
-            break
-
-        if not question:
-            continue
-
-        print("-" * 40)
-
-        try:
-            agent.print_response(question)
-        except Exception as e:
-            print(f"❌ Error: {e}")
-
-        print("\n" + "=" * 50 + "\n")
+        # Run the agent with the query and stream the results
+        response_stream = await agent.arun(
+            query, stream=True, stream_intermediate_steps=True
+        )
 
 
-if __name__ == "__main__":
-    # Check if OpenAI API key is set
-    if not os.getenv("OPENAI_API_KEY"):
-        print("❌ Please set your OPENAI_API_KEY in the .env file")
-        exit(1)
+        # Stream all response chunks first
+        async for run_response_chunk in response_stream:
+            run_response_chunk = cast(RunResponse, run_response_chunk)
+            yield run_response_chunk.to_json()
 
-    print("Choose mode:")
-    print("1. Demo mode (uses example.com)")
-    print("2. Interactive mode (specify your own URLs)")
 
-    choice = input("Enter choice (1 or 2): ").strip()
-
-    if choice == "1":
-        demo_web_support_bot()
-    elif choice == "2":
-        interactive_mode()
-    else:
-        print("Invalid choice. Running demo mode...")
-        demo_web_support_bot()
+    except Exception as e:
+        error_response = RunResponse(
+            content=str(e),
+            event=RunEvent.run_error,
+        )
+        yield error_response.to_json()
+        return

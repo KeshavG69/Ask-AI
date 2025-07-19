@@ -1,0 +1,50 @@
+{
+  "created_at": 1752855281,
+  "event": "RunStarted",
+  "agent_id": "4020f5b1-8dc0-4845-b63d-7349abe0e426",
+  "run_id": "0b36b2a3-c155-45ce-be61-ba2e869e8982",
+  "session_id": "16d946c4-805d-43d4-ba52-1339d60128e5",
+  "model": "gpt-4.1-mini",
+  "model_provider": "OpenAI"
+}{
+  "created_at": 1752855285,
+  "event": "ToolCallStarted",
+  "agent_id": "4020f5b1-8dc0-4845-b63d-7349abe0e426",
+  "run_id": "0b36b2a3-c155-45ce-be61-ba2e869e8982",
+  "session_id": "16d946c4-805d-43d4-ba52-1339d60128e5",
+  "tool": {
+    "tool_call_id": "call_NouRLHea9obzYTjLyrh7omu2",
+    "tool_name": "crawl_selected_urls",
+    "tool_args": {
+      "urls": [
+        "https://docs.agno.com/examples/concepts/tools/web_scrape/firecrawl.md"
+      ]
+    },
+    "tool_call_error": null,
+    "result": null,
+    "metrics": null,
+    "stop_after_tool_call": false,
+    "created_at": 1752855251,
+    "requires_confirmation": null,
+    "confirmed": null,
+    "confirmation_note": null,
+    "requires_user_input": null,
+    "user_input_schema": null,
+    "answered": null,
+    "external_execution_required": null
+  }
+}{
+  "created_at": 1752855290,
+  "event": "ToolCallCompleted",
+  "agent_id": "4020f5b1-8dc0-4845-b63d-7349abe0e426",
+  "run_id": "0b36b2a3-c155-45ce-be61-ba2e869e8982",
+  "session_id": "16d946c4-805d-43d4-ba52-1339d60128e5",
+  "content": "crawl_selected_urls(urls=['https://docs.agno.com/examples/concepts/tools/web_scrape/firecrawl.md']) completed in 4.5667s.",
+  "tool": {
+    "tool_call_id": "call_NouRLHea9obzYTjLyrh7omu2",
+    "tool_name": "crawl_selected_urls",
+    "tool_args": {
+      "urls": [
+        "https://docs.agno.com/examples/concepts/tools/web_scrape/firecrawl.md"
+      ]
+    },
