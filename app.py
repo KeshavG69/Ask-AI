@@ -1,4 +1,5 @@
 import logging
+import json
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from typing import List, AsyncGenerator, cast
@@ -7,6 +8,7 @@ from pydantic import BaseModel
 from agno.agent import Agent
 from agno.run.response import RunEvent, RunResponse
 from agent import create_web_support_agent
+from simple_processor import simple_process_stream
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -27,37 +29,38 @@ async def stream_chat_response(
     agent: Agent,
 ) -> AsyncGenerator:
     """
-    Stream agent response following Figma pattern.
+    🚀 ULTRA-FAST STREAM RESPONSE WITH BACKEND PROCESSING
+    
+    Uses our streaming beast to process complex agno responses into clean chunks!
 
     Args:
         query: User's question
         agent: Web support agent instance
 
     Yields:
-        JSON chunks of agent response
+        Clean, processed chunks ready for direct frontend consumption
     """
     try:
-        logger.info(f"🚀 Starting agent stream for query: {query[:50]}...")
+        logger.info(f"🚀 Starting BEAST MODE stream for query: {query[:50]}...")
 
         # Run the agent with the query and stream the results
-        response_stream = await agent.arun(
+        raw_response_stream = await agent.arun(
             query, stream=True, stream_intermediate_steps=True
         )
 
-        # Stream all response chunks
-        async for run_response_chunk in response_stream:
-            run_response_chunk = cast(RunResponse, run_response_chunk)
-            yield run_response_chunk.to_json()
+        # 🍌 PROCESS THROUGH OUR SIMPLE BANANA PROCESSOR!
+        async for processed_chunk in simple_process_stream(raw_response_stream):
+            yield processed_chunk
 
-        logger.info(f"✅ Agent stream completed successfully")
+        logger.info(f"✅ BEAST MODE stream completed successfully!")
 
     except Exception as e:
-        logger.error(f"❌ Error in agent stream: {str(e)}")
-        error_response = RunResponse(
-            content=str(e),
-            event=RunEvent.run_error,
-        )
-        yield error_response.to_json()
+        logger.error(f"❌ Error in BEAST MODE stream: {str(e)}")
+        error_chunk = {
+            "type": "error",
+            "message": str(e)
+        }
+        yield f"data: {json.dumps(error_chunk)}\n\n"
         return
 
 

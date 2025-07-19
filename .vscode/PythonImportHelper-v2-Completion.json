@@ -140,6 +140,62 @@
         "documentation": {}
     },
     {
+        "label": "AsyncGenerator",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Dict",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Any",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "AsyncGenerator",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Dict",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Any",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "List",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
         "label": "List",
         "importPath": "typing",
         "description": "typing",
@@ -196,6 +252,38 @@
         "documentation": {}
     },
     {
+        "label": "RunResponse",
+        "importPath": "agno.run.response",
+        "description": "agno.run.response",
+        "isExtraImport": true,
+        "detail": "agno.run.response",
+        "documentation": {}
+    },
+    {
+        "label": "RunEvent",
+        "importPath": "agno.run.response",
+        "description": "agno.run.response",
+        "isExtraImport": true,
+        "detail": "agno.run.response",
+        "documentation": {}
+    },
+    {
+        "label": "RunResponse",
+        "importPath": "agno.run.response",
+        "description": "agno.run.response",
+        "isExtraImport": true,
+        "detail": "agno.run.response",
+        "documentation": {}
+    },
+    {
+        "label": "RunEvent",
+        "importPath": "agno.run.response",
+        "description": "agno.run.response",
+        "isExtraImport": true,
+        "detail": "agno.run.response",
+        "documentation": {}
+    },
+    {
         "label": "load_dotenv",
         "importPath": "dotenv",
         "description": "dotenv",
@@ -218,6 +306,15 @@
         "importPath": "logging",
         "description": "logging",
         "detail": "logging",
+        "documentation": {}
+    },
+    {
+        "label": "json",
+        "kind": 6,
+        "isExtraImport": true,
+        "importPath": "json",
+        "description": "json",
+        "detail": "json",
         "documentation": {}
     },
     {
@@ -274,6 +371,14 @@
         "description": "agent",
         "isExtraImport": true,
         "detail": "agent",
+        "documentation": {}
+    },
+    {
+        "label": "simple_process_stream",
+        "importPath": "simple_processor",
+        "description": "simple_processor",
+        "isExtraImport": true,
+        "detail": "simple_processor",
         "documentation": {}
     },
     {
@@ -454,7 +559,7 @@
         "kind": 2,
         "importPath": "agent",
         "description": "agent",
-        "peekOfCode": "def create_web_support_agent(starting_urls: List,company_name:str):\n    \"\"\"Create a web support agent with crawling capabilities.\"\"\"\n    # Create the crawler tool - it will automatically extract allowed domains from starting URLs\n    crawler_tool = WebCrawlerTool(starting_urls=starting_urls)\n    # Create agent with intelligent instructions\n    agent = Agent(\n        model=OpenAIChat(id=\"gpt-4.1\", api_key=os.getenv(\"OPENAI_API_KEY\")),\n        tools=[crawler_tool,ReasoningTools()],\n        description=f\"You are an agent that answers user queries based exclusively on content from the starting URLs: {', '.join(starting_urls)}. The starting URLs serve only as the content source - you crawl them to get information and answer questions based on that content.\",\n        instructions=[",
+        "peekOfCode": "def create_web_support_agent(starting_urls: List,company_name:str):\n    \"\"\"Create a web support agent with data retrieval capabilities.\"\"\"\n    # Create the crawler tool - it will automatically extract allowed domains from starting URLs\n    crawler_tool = WebCrawlerTool(starting_urls=starting_urls)\n    # Create agent with intelligent instructions\n    agent = Agent(\n        model=OpenAIChat(id=\"gpt-4.1\", api_key=os.getenv(\"OPENAI_API_KEY\")),\n        tools=[crawler_tool,ReasoningTools()],\n        description=f\"You are an agent that answers user queries based exclusively on content from the starting URLs: {', '.join(starting_urls)}. The starting URLs serve only as the content source - you retrieve information from them and answer questions based on that content.\",\n        instructions=[",
         "detail": "agent",
         "documentation": {}
     },
@@ -501,6 +606,42 @@
         "description": "server",
         "peekOfCode": "app = FastAPI(\n    title=\"AI Chat Widget API\",\n    description=\"Streaming AI chat API for website integration\",\n    version=\"1.0.0\"\n)\n# Add CORS middleware for cross-origin requests (essential for widget embedding)\napp.add_middleware(\n    CORSMiddleware,\n    allow_origins=[\"*\"],  # Allow all origins for widget embedding\n    allow_credentials=True,",
         "detail": "server",
+        "documentation": {}
+    },
+    {
+        "label": "logger",
+        "kind": 5,
+        "importPath": "simple_processor",
+        "description": "simple_processor",
+        "peekOfCode": "logger = logging.getLogger(__name__)\nasync def simple_process_stream(raw_stream: AsyncGenerator) -> AsyncGenerator[str, None]:\n    \"\"\"\n    🍌 BANANA PROCESSOR - Now with REAL CONTENT EXTRACTION + NO REPETITION!\n    \"\"\"\n    try:\n        logger.info(\"🍌 BANANA PROCESSOR ACTIVATED - EXTRACTING REAL CONTENT!\")\n        content_buffer = \"\"\n        reasoning_steps = []\n        sent_reasoning_steps = []  # Track what we've already sent to prevent repetition",
+        "detail": "simple_processor",
+        "documentation": {}
+    },
+    {
+        "label": "StreamProcessor",
+        "kind": 6,
+        "importPath": "stream_processor",
+        "description": "stream_processor",
+        "peekOfCode": "class StreamProcessor:\n    \"\"\"\n    🔥 THE STREAMING MONSTER\n    Processes complex agno streams and emits clean, simple chunks for frontend\n    \"\"\"\n    def __init__(self):\n        self.reasoning_steps = []\n        self.content_buffer = \"\"\n        self.crawled_urls = []\n        self.is_streaming = False",
+        "detail": "stream_processor",
+        "documentation": {}
+    },
+    {
+        "label": "logger",
+        "kind": 5,
+        "importPath": "stream_processor",
+        "description": "stream_processor",
+        "peekOfCode": "logger = logging.getLogger(__name__)\nclass StreamProcessor:\n    \"\"\"\n    🔥 THE STREAMING MONSTER\n    Processes complex agno streams and emits clean, simple chunks for frontend\n    \"\"\"\n    def __init__(self):\n        self.reasoning_steps = []\n        self.content_buffer = \"\"\n        self.crawled_urls = []",
+        "detail": "stream_processor",
+        "documentation": {}
+    },
+    {
+        "label": "stream_processor",
+        "kind": 5,
+        "importPath": "stream_processor",
+        "description": "stream_processor",
+        "peekOfCode": "stream_processor = StreamProcessor()\nasync def process_agent_stream(raw_stream: AsyncGenerator) -> AsyncGenerator[str, None]:\n    \"\"\"\n    🎯 MAIN ENTRY POINT\n    Process raw agno stream into clean chunks\n    \"\"\"\n    async for processed_chunk in stream_processor.process_stream(raw_stream):\n        yield processed_chunk",
+        "detail": "stream_processor",
         "documentation": {}
     },
     {

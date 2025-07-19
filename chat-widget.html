@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Widget Demo</title>
+    <style>
+        /* Demo page styling */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+            margin: 0;
+            padding: 40px;
+            background: #f5f7fa;
+            line-height: 1.6;
+        }
+        
+        .demo-content {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #1a202c;
+            margin-bottom: 20px;
+        }
+        
+        p {
+            color: #4a5568;
+            margin-bottom: 16px;
+        }
+        
+        .demo-note {
+            background: #ebf8ff;
+            border: 1px solid #90cdf4;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+            color: #2b6cb0;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-content">
+        <h1>🕷️ Website Content</h1>
+        <p>This is some example content for the webpage. The chatbot widget will appear on the bottom right of the screen.</p>
+        
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor. Cras elementum ultrices diam. Maecenas ligula massa, varius a, semper congue, euismod non, mi.</p>
+        
+        <div class="demo-note">
+            💡 <strong>Demo:</strong> Click the chat button in the bottom-right corner to start a conversation!
+        </div>
+        
+        <p>Proin porttitor, orci nec nonummy molestie, enim est eleifend mi, non fermentum diam nisl sit amet erat. Duis semper. Duis arcu massa, scelerisque vitae, consequat in, pretium a, enim. Pellentesque congue.</p>
+    </div>
+
+    <!-- Chat Widget -->
+    <script>
+        // Chat Widget Configuration
+        window.ChatWidgetConfig = {
+            apiUrl: 'http://localhost:8000/chat',
+            urls: [
+                'https://www.cricbuzz.com/',
+
+            ],
+            companyName: 'Demo Company',
+            position: 'bottom-right',
+            theme: {
+                primaryColor: '#667eea',
+                secondaryColor: '#764ba2'
+            }
+        };
+    </script>
+    
+    <!-- React CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Markdown renderer -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script type="text/babel">
+        // Chat Widget Component
+        const ChatWidget = () => {
+            const [isOpen, setIsOpen] = React.useState(false);
+            const [messages, setMessages] = React.useState([]);
+            const [currentStreamData, setCurrentStreamData] = React.useState({
+                reasoningSteps: [],
+                content: '',
+                sources: [],
+                isStreaming: false
+            });
+            
+            const [query, setQuery] = React.useState('');
+            const [isLoading, setIsLoading] = React.useState(false);
+            const [error, setError] = React.useState(null);
+            const [connectionStatus, setConnectionStatus] = React.useState('idle');
+            
+            const messagesEndRef = React.useRef(null);
+            const [storedCrawlUrls, setStoredCrawlUrls] = React.useState([]);
+            
+            // Auto scroll to bottom
+            const scrollToBottom = () => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            };
+            
+            React.useEffect(() => {
+                if (isOpen) {
+                    scrollToBottom();
+                }
+            }, [messages, currentStreamData, isOpen]);
+            
+            // Generate session ID
+            const generateSessionId = () => {
+                return 'session_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+            };
+            
+            // Stream processing
+            const processStreamChunk = (chunk) => {
+                console.log('Processing chunk:', chunk.event, chunk);
+                
+                setCurrentStreamData(prev => {
+                    const newData = { ...prev };
+                    
+                    switch (chunk.event) {
+                        case 'RunStarted':
+                            newData.isStreaming = true;
+                            newData.content = '';
+                            newData.reasoningSteps = [];
+                            newData.sources = [];
+                            setStoredCrawlUrls([]);
+                            break;
+                            
+                        case 'RunResponseContent':
+                            if (typeof chunk.content === 'string') {
+                                newData.content = (newData.content || '') + chunk.content;
+                                newData.isStreaming = true;
+                            }
+                            break;
+                            
+                        case 'ToolCallStarted':
+                            if (chunk.tool?.tool_name === 'crawl_selected_urls' && chunk.tool.tool_args?.urls) {
+                                setStoredCrawlUrls(chunk.tool.tool_args.urls);
+                            }
+                            
+                            if (chunk.tool?.tool_name === 'think' && chunk.tool.tool_args) {
+                                const step = {
+                                    title: chunk.tool.tool_args.title || 'Thinking...',
+                                    reasoning: chunk.tool.tool_args.thought || '',
+                                    result: '',
+                                    confidence: chunk.tool.tool_args.confidence || 1.0
+                                };
+                                
+                                const stepExists = newData.reasoningSteps.some(s => 
+                                    s.title === step.title && s.reasoning === step.reasoning
+                                );
+                                
+                                if (!stepExists && step.title && step.reasoning) {
+                                    newData.reasoningSteps = [...newData.reasoningSteps, step];
+                                }
+                            }
+                            break;
+                            
+                        case 'ToolCallCompleted':
+                            if (chunk.tool?.tool_name === 'think' && chunk.tool.tool_args) {
+                                const step = {
+                                    title: chunk.tool.tool_args.title || 'Thinking...',
+                                    reasoning: chunk.tool.tool_args.thought || '',
+                                    result: chunk.tool.tool_args.action || 'Completed',
+                                    confidence: chunk.tool.tool_args.confidence || 1.0
+                                };
+                                
+                                const existingIndex = newData.reasoningSteps.findIndex(s => 
+                                    s.title === step.title && s.reasoning === step.reasoning
+                                );
+                                
+                                if (existingIndex !== -1) {
+                                    const updatedSteps = [...newData.reasoningSteps];
+                                    updatedSteps[existingIndex] = { ...updatedSteps[existingIndex], result: step.result };
+                                    newData.reasoningSteps = updatedSteps;
+                                } else if (step.title && step.reasoning) {
+                                    newData.reasoningSteps = [...newData.reasoningSteps, step];
+                                }
+                            }
+                            break;
+                            
+                        case 'RunCompleted':
+                            newData.isStreaming = false;
+                            if (typeof chunk.content === 'string' && chunk.content.trim()) {
+                                newData.content = chunk.content;
+                            }
+                            if (chunk.extra_data?.reasoning_steps) {
+                                newData.reasoningSteps = chunk.extra_data.reasoning_steps;
+                            }
+                            break;
+                            
+                        case 'RunError':
+                            newData.isStreaming = false;
+                            setError(chunk.content || 'An error occurred');
+                            break;
+                    }
+                    
+                    return newData;
+                });
+            };
+            
+            // Show sources after streaming is complete
+            React.useEffect(() => {
+                if (!currentStreamData.isStreaming && storedCrawlUrls.length > 0 && currentStreamData.sources.length === 0) {
+                    const sources = storedCrawlUrls.map(url => {
+                        try {
+                            const urlObj = new URL(url);
+                            return {
+                                url,
+                                domain: urlObj.hostname,
+                                title: url.split('/').pop() || urlObj.pathname || 'Documentation'
+                            };
+                        } catch {
+                            return {
+                                url,
+                                domain: 'Unknown',
+                                title: url
+                            };
+                        }
+                    });
+                    
+                    setCurrentStreamData(prev => ({
+                        ...prev,
+                        sources: sources
+                    }));
+                }
+            }, [currentStreamData.isStreaming, storedCrawlUrls, currentStreamData.sources.length]);
+            
+            // Send message
+            const sendMessage = async () => {
+                if (!query.trim()) return;
+                
+                const config = window.ChatWidgetConfig;
+                const sessionId = generateSessionId();
+                
+                const userMessage = {
+                    role: 'user',
+                    content: query,
+                    created_at: Date.now()
+                };
+                
+                setMessages(prev => [...prev, userMessage]);
+                
+                const agentMessage = {
+                    role: 'agent',
+                    content: '',
+                    created_at: Date.now() + 1
+                };
+                
+                setMessages(prev => [...prev, agentMessage]);
+                
+                setCurrentStreamData({
+                    reasoningSteps: [],
+                    content: '',
+                    sources: [],
+                    isStreaming: true
+                });
+                
+                setIsLoading(true);
+                setError(null);
+                setConnectionStatus('connecting');
+                
+                try {
+                    const response = await fetch(config.apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            urls: config.urls,
+                            query: query,
+                            session_id: sessionId,
+                            company_name: config.companyName
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    setConnectionStatus('connected');
+                    
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = '';
+                    
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        
+                        if (done) break;
+                        
+                        buffer += decoder.decode(value, { stream: true });
+                        
+                        let jsonStart = buffer.indexOf('{');
+                        while (jsonStart !== -1) {
+                            let braceCount = 0;
+                            let inString = false;
+                            let jsonEnd = -1;
+                            
+                            for (let i = jsonStart; i < buffer.length; i++) {
+                                const char = buffer[i];
+                                
+                                if (char === '"' && buffer[i - 1] !== '\\') {
+                                    inString = !inString;
+                                }
+                                
+                                if (!inString) {
+                                    if (char === '{') braceCount++;
+                                    if (char === '}') braceCount--;
+                                }
+                                
+                                if (braceCount === 0) {
+                                    jsonEnd = i;
+                                    break;
+                                }
+                            }
+                            
+                            if (jsonEnd !== -1) {
+                                const jsonString = buffer.slice(jsonStart, jsonEnd + 1);
+                                try {
+                                    const chunk = JSON.parse(jsonString);
+                                    processStreamChunk(chunk);
+                                } catch (e) {
+                                    console.error('JSON parse error:', e);
+                                }
+                                buffer = buffer.slice(jsonEnd + 1).trim();
+                                jsonStart = buffer.indexOf('{');
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                    
+                    setMessages(prev => {
+                        const newMessages = [...prev];
+                        const lastMessage = newMessages[newMessages.length - 1];
+                        if (lastMessage && lastMessage.role === 'agent') {
+                            lastMessage.content = currentStreamData.content;
+                        }
+                        return newMessages;
+                    });
+                    
+                } catch (err) {
+                    console.error('Stream error:', err);
+                    setError(err.message || 'Failed to connect to backend');
+                    setConnectionStatus('error');
+                } finally {
+                    setIsLoading(false);
+                    setQuery('');
+                }
+            };
+            
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                sendMessage();
+            };
+            
+            const handleKeyPress = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+                if (e.key === 'Escape') {
+                    setIsOpen(false);
+                }
+            };
+            
+            return (
+                <>
+                    {/* Floating Chat Button */}
+                    <div style={{
+                        position: 'fixed',
+                        bottom: '20px',
+                        right: '20px',
+                        zIndex: 10000
+                    }}>
+                        <button
+                            onClick={() => setIsOpen(!isOpen)}
+                            style={{
+                                width: '60px',
+                                height: '60px',
+                                borderRadius: '50%',
+                                border: 'none',
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                color: 'white',
+                                fontSize: '24px',
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 20px rgba(102, 126, 234, 0.4)',
+                                transition: 'all 0.3s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.target.style.transform = 'scale(1.1)';
+                                e.target.style.boxShadow = '0 6px 25px rgba(102, 126, 234, 0.6)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.target.style.transform = 'scale(1)';
+                                e.target.style.boxShadow = '0 4px 20px rgba(102, 126, 234, 0.4)';
+                            }}
+                        >
+                            {isOpen ? '✕' : '💬'}
+                        </button>
+                    </div>
+                    
+                    {/* Chat Modal */}
+                    {isOpen && (
+                        <div style={{
+                            position: 'fixed',
+                            bottom: '90px',
+                            right: '20px',
+                            width: '400px',
+                            height: '600px',
+                            background: 'white',
+                            borderRadius: '12px',
+                            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+                            zIndex: 9999,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            overflow: 'hidden',
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                        }}>
+                            {/* Header */}
+                            <div style={{
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                color: 'white',
+                                padding: '16px 20px',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                            }}>
+                                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>
+                                    Chatbot Assistant
+                                </h3>
+                                <button
+                                    onClick={() => setIsOpen(false)}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: 'white',
+                                        fontSize: '20px',
+                                        cursor: 'pointer',
+                                        padding: '4px',
+                                        borderRadius: '4px'
+                                    }}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                            
+                            {/* Messages Area */}
+                            <div style={{
+                                flex: 1,
+                                overflowY: 'auto',
+                                padding: '16px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '16px'
+                            }}>
+                                {messages.length === 0 && (
+                                    <div style={{
+                                        textAlign: 'center',
+                                        color: '#6b7280',
+                                        marginTop: '40px'
+                                    }}>
+                                        <div style={{ fontSize: '48px', marginBottom: '16px' }}>🤖</div>
+                                        <p>Hi! I'm here to help you with questions about our documentation and services.</p>
+                                        <p style={{ fontSize: '14px' }}>Ask me anything!</p>
+                                    </div>
+                                )}
+                                
+                                {messages.map((message, index) => (
+                                    <MessageDisplay 
+                                        key={index} 
+                                        message={message} 
+                                        streamData={index === messages.length - 1 ? currentStreamData : {
+                                            reasoningSteps: [],
+                                            content: '',
+                                            sources: [],
+                                            isStreaming: false
+                                        }}
+                                    />
+                                ))}
+                                
+                                <div ref={messagesEndRef} />
+                            </div>
+                            
+                            {/* Input Area */}
+                            <div style={{
+                                borderTop: '1px solid #e5e7eb',
+                                padding: '16px',
+                                background: '#f9fafb'
+                            }}>
+                                {error && (
+                                    <div style={{
+                                        background: '#fef2f2',
+                                        border: '1px solid #fca5a5',
+                                        borderRadius: '6px',
+                                        padding: '8px 12px',
+                                        color: '#dc2626',
+                                        fontSize: '14px',
+                                        marginBottom: '12px'
+                                    }}>
+                                        {error}
+                                    </div>
+                                )}
+                                
+                                <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '8px' }}>
+                                    <input
+                                        type="text"
+                                        value={query}
+                                        onChange={(e) => setQuery(e.target.value)}
+                                        onKeyPress={handleKeyPress}
+                                        placeholder="Type your message..."
+                                        disabled={isLoading}
+                                        style={{
+                                            flex: 1,
+                                            padding: '12px',
+                                            border: '1px solid #d1d5db',
+                                            borderRadius: '8px',
+                                            fontSize: '14px',
+                                            outline: 'none',
+                                            transition: 'border-color 0.2s'
+                                        }}
+                                        onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                                        onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={isLoading || !query.trim()}
+                                        style={{
+                                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            padding: '12px 16px',
+                                            cursor: isLoading || !query.trim() ? 'default' : 'pointer',
+                                            opacity: isLoading || !query.trim() ? 0.6 : 1,
+                                            fontSize: '16px'
+                                        }}
+                                    >
+                                        {isLoading ? '⏳' : '➤'}
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+                </>
+            );
+        };
+        
+        // Message Components
+        const MessageDisplay = ({ message, streamData }) => {
+            const [reasoningExpanded, setReasoningExpanded] = React.useState(true);
+            
+            if (message.role === 'user') {
+                return (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                        <div style={{
+                            background: '#3b82f6',
+                            color: 'white',
+                            padding: '12px 16px',
+                            borderRadius: '18px 18px 4px 18px',
+                            maxWidth: '80%',
+                            fontSize: '14px',
+                            wordWrap: 'break-word'
+                        }}>
+                            {message.content}
+                        </div>
+                        <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: '#3b82f6',
+                            color: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            flexShrink: 0
+                        }}>
+                            Y
+                        </div>
+                    </div>
+                );
+            }
+            
+            return (
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                    <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        background: '#1f2937',
+                        color: 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        flexShrink: 0
+                    }}>
+                        B
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {/* Reasoning Steps */}
+                        {streamData.reasoningSteps.length > 0 && (
+                            <div style={{
+                                background: '#f8fafc',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '8px',
+                                overflow: 'hidden'
+                            }}>
+                                <button
+                                    onClick={() => setReasoningExpanded(!reasoningExpanded)}
+                                    style={{
+                                        width: '100%',
+                                        background: 'none',
+                                        border: 'none',
+                                        padding: '12px 16px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'space-between',
+                                        cursor: 'pointer',
+                                        fontSize: '14px',
+                                        fontWeight: '500',
+                                        color: '#1f2937'
+                                    }}
+                                >
+                                    <span>Reasoning</span>
+                                    <span style={{
+                                        transform: reasoningExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                                        transition: 'transform 0.2s'
+                                    }}>
+                                        ▼
+                                    </span>
+                                </button>
+                                {reasoningExpanded && (
+                                    <div style={{ padding: '0 16px 16px' }}>
+                                        <ReasoningStepsDisplay steps={streamData.reasoningSteps} compact={true} />
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        
+                        {/* Main Response */}
+                        {(message.content || streamData.content) && (
+                            <div 
+                                style={{
+                                    background: '#f3f4f6',
+                                    padding: '12px 16px',
+                                    borderRadius: '18px 18px 18px 4px',
+                                    fontSize: '14px',
+                                    lineHeight: '1.5',
+                                    color: '#1f2937'
+                                }}
+                                dangerouslySetInnerHTML={{ 
+                                    __html: (window.marked ? 
+                                        window.marked.parse(message.content || streamData.content) : 
+                                        (message.content || streamData.content)
+                                    ) + (streamData.isStreaming ? '<span style="color: #3b82f6; font-weight: bold; animation: blink 1s infinite;">|</span>' : '')
+                                }}
+                            />
+                        )}
+                        
+                        {/* Sources */}
+                        {streamData.sources.length > 0 && (
+                            <div style={{
+                                background: '#fefce8',
+                                border: '1px solid #fde047',
+                                borderRadius: '8px',
+                                padding: '12px'
+                            }}>
+                                <div style={{
+                                    fontSize: '12px',
+                                    fontWeight: '600',
+                                    color: '#1f2937',
+                                    marginBottom: '8px'
+                                }}>
+                                    Sources
+                                </div>
+                                {streamData.sources.map((source, index) => (
+                                    <div key={index} style={{
+                                        fontSize: '12px',
+                                        color: '#6b7280',
+                                        marginBottom: '4px',
+                                        wordBreak: 'break-word'
+                                    }}>
+                                        • <a 
+                                            href={source.url} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            style={{
+                                                color: '#3b82f6',
+                                                textDecoration: 'none'
+                                            }}
+                                        >
+                                            {source.url}
+                                        </a>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+        
+        // Compact Reasoning Steps
+        const ReasoningStepsDisplay = ({ steps, compact = false }) => {
+            const [visibleSteps, setVisibleSteps] = React.useState(0);
+            
+            React.useEffect(() => {
+                if (steps.length === 0) {
+                    setVisibleSteps(0);
+                    return;
+                }
+                
+                setVisibleSteps(0);
+                const timer = setInterval(() => {
+                    setVisibleSteps(prev => {
+                        if (prev >= steps.length) {
+                            clearInterval(timer);
+                            return prev;
+                        }
+                        return prev + 1;
+                    });
+                }, 1200);
+                
+                return () => clearInterval(timer);
+            }, [steps.length]);
+            
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {steps.slice(0, visibleSteps).map((step, index) => (
+                        <div key={index} style={{
+                            background: 'rgba(59, 130, 246, 0.05)',
+                            border: '1px solid #dbeafe',
+                            borderRadius: '6px',
+                            padding: '12px',
+                            fontSize: '12px'
+                        }}>
+                            <div style={{
+                                fontWeight: '500',
+                                color: '#1f2937',
+                                marginBottom: '4px'
+                            }}>
+                                {step.title}
+                            </div>
+                            <div style={{ color: '#6b7280', lineHeight: '1.4' }}>
+                                {step.reasoning}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            );
+        };
+        
+        // Render Widget
+        ReactDOM.render(<ChatWidget />, document.createElement('div'));
+        
+        // Add styles to document head
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes blink {
+                0%, 50% { opacity: 1; }
+                51%, 100% { opacity: 0; }
+            }
+            
+            @media (max-width: 480px) {
+                /* Mobile responsiveness */
+                div[style*="width: 400px"] {
+                    width: calc(100vw - 40px) !important;
+                    right: 20px !important;
+                    left: 20px !important;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Mount widget to body
+        const widgetContainer = document.createElement('div');
+        document.body.appendChild(widgetContainer);
+        ReactDOM.render(<ChatWidget />, widgetContainer);
+    </script>
+</body>
+</html>

@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Web Crawler Chat</title>
+    
+    <!-- React CDN -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX transformation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f8fafc;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .chat-header h1 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+        }
+        
+        .chat-header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .chat-input-area {
+            border-top: 1px solid #e5e7eb;
+            padding: 20px;
+            background: #f9fafb;
+        }
+        
+        .input-section {
+            margin-bottom: 15px;
+        }
+        
+        .input-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #374151;
+            font-size: 14px;
+        }
+        
+        .input-field {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        
+        .input-field:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .url-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .url-input-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .add-url-btn, .remove-url-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .add-url-btn {
+            background: #10b981;
+            color: white;
+        }
+        
+        .remove-url-btn {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .send-button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .send-button:hover {
+            transform: translateY(-1px);
+        }
+        
+        .send-button:disabled {
+            opacity: 0.6;
+            transform: none;
+            cursor: not-allowed;
+        }
+        
+        /* Message Styles */
+        .user-message {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .agent-message {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .user-avatar, .agent-avatar {
+            font-size: 24px;
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #f3f4f6;
+        }
+
+        .user-content {
+            background: #3b82f6;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 18px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+
+        .agent-response {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Reasoning Steps */
+        .reasoning-steps-container {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .reasoning-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .reasoning-icon {
+            font-size: 20px;
+        }
+
+        .reasoning-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .reasoning-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .reasoning-step {
+            background: rgba(59, 130, 246, 0.05);
+            border: 1px solid #dbeafe;
+            border-radius: 8px;
+            padding: 16px;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.5s ease-out forwards;
+        }
+
+        .step-content {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .step-number {
+            width: 24px;
+            height: 24px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .step-details {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .step-title {
+            font-weight: 500;
+            color: #1f2937;
+        }
+
+        .step-reasoning {
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .step-result {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            color: #059669;
+        }
+
+        .step-confidence {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .reasoning-loading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px;
+            color: #6b7280;
+        }
+
+        .loading-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e5e7eb;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Main Response */
+        .main-response {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .response-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .response-icon {
+            font-size: 18px;
+        }
+
+        .response-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .response-content {
+            padding: 20px;
+            line-height: 1.6;
+            color: #374151;
+            white-space: pre-wrap;
+        }
+
+        .streaming-cursor {
+            color: #3b82f6;
+            font-weight: bold;
+            animation: blink 1s infinite;
+        }
+
+        /* Sources */
+        .sources-section {
+            background: #fefce8;
+            border: 1px solid #fde047;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .sources-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .sources-icon {
+            font-size: 20px;
+        }
+
+        .sources-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .sources-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .source-item {
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid #fbbf24;
+            border-radius: 8px;
+            padding: 12px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .source-item:hover {
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .source-content {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .source-link-icon {
+            color: #3b82f6;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .source-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .source-title {
+            font-weight: 500;
+            font-size: 14px;
+            color: #1f2937;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+
+        .source-domain {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 2px;
+        }
+
+        .source-url {
+            font-size: 12px;
+            color: #3b82f6;
+            word-break: break-all;
+        }
+
+        .sources-count {
+            margin-top: 12px;
+            font-size: 12px;
+            color: #92400e;
+            font-style: italic;
+        }
+
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            border-radius: 8px;
+            padding: 12px;
+            color: #dc2626;
+            margin-top: 10px;
+        }
+
+        .connection-status {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+
+        .connection-status.connected {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .connection-status.connecting {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .connection-status.error {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes blink {
+            0%, 50% { 
+                opacity: 1; 
+            }
+            51%, 100% { 
+                opacity: 0; 
+            }
+        }
+
+        @keyframes spin {
+            0% { 
+                transform: rotate(0deg); 
+            }
+            100% { 
+                transform: rotate(360deg); 
+            }
+        }
+
+        .mb-6 {
+            margin-bottom: 24px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .chat-container {
+                height: 100vh;
+            }
+            
+            .url-input-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .user-content {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // Utility function to generate session ID
+        const generateSessionId = () => {
+            return 'session_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+        };
+
+        // Component: ReasoningStepsDisplay  
+        const ReasoningStepsDisplay = ({ steps }) => {
+            const [visibleSteps, setVisibleSteps] = React.useState(0);
+            const [isAnimating, setIsAnimating] = React.useState(false);
+            
+            React.useEffect(() => {
+                if (steps.length === 0) {
+                    setVisibleSteps(0);
+                    setIsAnimating(false);
+                    return;
+                }
+                
+                setIsAnimating(true);
+                setVisibleSteps(0);
+                
+                const timer = setInterval(() => {
+                    setVisibleSteps(prev => {
+                        if (prev >= steps.length) {
+                            clearInterval(timer);
+                            setIsAnimating(false);
+                            return prev;
+                        }
+                        return prev + 1;
+                    });
+                }, 1200); // Human-readable speed - 1.2 seconds between steps
+                
+                return () => {
+                    clearInterval(timer);
+                    setIsAnimating(false);
+                };
+            }, [steps.length]);
+            
+            if (steps.length === 0) return null;
+            
+            return (
+                <div className="reasoning-steps-container">
+                    <div className="reasoning-header">
+                        <span className="reasoning-icon">🧠</span>
+                        <h3 className="reasoning-title">AI Reasoning Process</h3>
+                    </div>
+                    
+                    <div className="reasoning-steps">
+                        {steps.slice(0, visibleSteps).map((step, index) => (
+                            <div 
+                                key={index} 
+                                className="reasoning-step"
+                                style={{
+                                    animationDelay: `${index * 0.1}s`,
+                                    animationFillMode: 'both'
+                                }}
+                            >
+                                <div className="step-content">
+                                    <div className="step-number">
+                                        {index + 1}
+                                    </div>
+                                    <div className="step-details">
+                                        <div className="step-title">
+                                            {step.title}
+                                        </div>
+                                        {step.reasoning && (
+                                            <div className="step-reasoning">
+                                                {step.reasoning}
+                                            </div>
+                                        )}
+                                        {step.result && (
+                                            <div className="step-result">
+                                                <span>✓</span>
+                                                <span>{step.result}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        
+                        {isAnimating && visibleSteps < steps.length && (
+                            <div className="reasoning-loading">
+                                <div className="loading-spinner"></div>
+                                <span>Thinking...</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // Component: SourcesDisplay
+        const SourcesDisplay = ({ sources }) => {
+            if (sources.length === 0) return null;
+            
+            return (
+                <div className="sources-section">
+                    <div className="sources-header">
+                        <span className="sources-icon">📚</span>
+                        <h3 className="sources-title">Sources</h3>
+                    </div>
+                    
+                    <div className="sources-list">
+                        {sources.map((source, index) => (
+                            <div key={index} className="source-item">
+                                <div className="source-content">
+                                    <span className="source-link-icon">🔗</span>
+                                    <div className="source-details">
+                                        <div className="source-title">
+                                            {source.title || source.url.split('/').pop() || source.domain}
+                                        </div>
+                                        <div className="source-domain">
+                                            {source.domain}
+                                        </div>
+                                        <div className="source-url">
+                                            {source.url}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    
+                    <div className="sources-count">
+                        {sources.length} source{sources.length !== 1 ? 's' : ''} crawled
+                    </div>
+                </div>
+            );
+        };
+
+        // Component: StreamingContent
+        const StreamingContent = ({ content, isStreaming }) => {
+            return (
+                <div className="response-content">
+                    {content}
+                    {isStreaming && (
+                        <span className="streaming-cursor">|</span>
+                    )}
+                </div>
+            );
+        };
+
+        // Component: Message Display
+        const MessageDisplay = ({ message, streamData }) => {
+            if (message.role === 'user') {
+                return (
+                    <div className="user-message">
+                        <div className="user-avatar">👤</div>
+                        <div className="user-content">{message.content}</div>
+                    </div>
+                );
+            }
+            
+            return (
+                <div className="agent-message">
+                    <div className="agent-avatar">🤖</div>
+                    <div className="agent-response">
+                        {/* Reasoning Steps */}
+                        {streamData.reasoningSteps.length > 0 && (
+                            <ReasoningStepsDisplay steps={streamData.reasoningSteps} />
+                        )}
+                        
+                        {/* Main Content */}
+                        {(message.content || streamData.content) && (
+                            <div className="main-response mb-6">
+                                <div className="response-header">
+                                    <span className="response-icon">💬</span>
+                                    <h3 className="response-title">Response</h3>
+                                </div>
+                                <StreamingContent 
+                                    content={message.content || streamData.content}
+                                    isStreaming={streamData.isStreaming}
+                                />
+                            </div>
+                        )}
+                        
+                        {/* Sources */}
+                        {streamData.sources.length > 0 && (
+                            <SourcesDisplay sources={streamData.sources} />
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // Main App Component
+        const App = () => {
+            const [messages, setMessages] = React.useState([]);
+            const [currentStreamData, setCurrentStreamData] = React.useState({
+                reasoningSteps: [],
+                content: '',
+                sources: [],
+                isStreaming: false
+            });
+            
+            // Form state
+            const [query, setQuery] = React.useState('');
+            const [urls, setUrls] = React.useState(['']);
+            const [companyName, setCompanyName] = React.useState('MyCompany');
+            const [isLoading, setIsLoading] = React.useState(false);
+            const [error, setError] = React.useState(null);
+            const [connectionStatus, setConnectionStatus] = React.useState('idle');
+            
+            const messagesEndRef = React.useRef(null);
+            
+            // Auto scroll to bottom
+            const scrollToBottom = () => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            };
+            
+            React.useEffect(() => {
+                scrollToBottom();
+            }, [messages, currentStreamData]);
+            
+            // URL management
+            const addUrl = () => {
+                setUrls([...urls, '']);
+            };
+            
+            const removeUrl = (index) => {
+                if (urls.length > 1) {
+                    setUrls(urls.filter((_, i) => i !== index));
+                }
+            };
+            
+            const updateUrl = (index, value) => {
+                const newUrls = [...urls];
+                newUrls[index] = value;
+                setUrls(newUrls);
+            };
+            
+            // Stream processing - store crawl URLs for later use
+            const [storedCrawlUrls, setStoredCrawlUrls] = React.useState([]);
+            
+            const processStreamChunk = (chunk) => {
+                console.log('Processing chunk:', chunk.event, chunk);
+                
+                setCurrentStreamData(prev => {
+                    const newData = { ...prev };
+                    
+                    switch (chunk.event) {
+                        case 'RunStarted':
+                            newData.isStreaming = true;
+                            newData.content = '';
+                            newData.reasoningSteps = [];
+                            newData.sources = [];
+                            // Reset stored URLs for new run
+                            setStoredCrawlUrls([]);
+                            break;
+                            
+                        case 'RunResponseContent':
+                            // Accumulate streaming content word by word
+                            if (typeof chunk.content === 'string') {
+                                newData.content = (newData.content || '') + chunk.content;
+                                newData.isStreaming = true;
+                            }
+                            break;
+                            
+                        case 'ToolCallStarted':
+                            // Store URLs from crawl tool for later use
+                            if (chunk.tool?.tool_name === 'crawl_selected_urls' && chunk.tool.tool_args?.urls) {
+                                setStoredCrawlUrls(chunk.tool.tool_args.urls);
+                            }
+                            
+                            // Handle real-time "think" tool calls
+                            if (chunk.tool?.tool_name === 'think' && chunk.tool.tool_args) {
+                                const step = {
+                                    title: chunk.tool.tool_args.title || 'Thinking...',
+                                    reasoning: chunk.tool.tool_args.thought || '',
+                                    result: '',
+                                    confidence: chunk.tool.tool_args.confidence || 1.0
+                                };
+                                
+                                // Add deduplication - check if same title AND thought already exists
+                                const stepExists = newData.reasoningSteps.some(s => 
+                                    s.title === step.title && s.reasoning === step.reasoning
+                                );
+                                
+                                if (!stepExists && step.title && step.reasoning) {
+                                    newData.reasoningSteps = [...newData.reasoningSteps, step];
+                                }
+                            }
+                            break;
+                            
+                        case 'ToolCallCompleted':
+                            // Handle completed "think" tool calls 
+                            if (chunk.tool?.tool_name === 'think' && chunk.tool.tool_args) {
+                                const step = {
+                                    title: chunk.tool.tool_args.title || 'Thinking...',
+                                    reasoning: chunk.tool.tool_args.thought || '',
+                                    result: chunk.tool.tool_args.action || 'Completed',
+                                    confidence: chunk.tool.tool_args.confidence || 1.0
+                                };
+                                
+                                // Check if we need to update existing step or add new one
+                                const existingIndex = newData.reasoningSteps.findIndex(s => 
+                                    s.title === step.title && s.reasoning === step.reasoning
+                                );
+                                
+                                if (existingIndex !== -1) {
+                                    // Update existing step with result
+                                    const updatedSteps = [...newData.reasoningSteps];
+                                    updatedSteps[existingIndex] = { ...updatedSteps[existingIndex], result: step.result };
+                                    newData.reasoningSteps = updatedSteps;
+                                } else if (step.title && step.reasoning) {
+                                    // Add new step if not exists
+                                    newData.reasoningSteps = [...newData.reasoningSteps, step];
+                                }
+                            }
+                            break;
+                            
+                        case 'RunCompleted':
+                            newData.isStreaming = false;
+                            // Use the final content from RunCompleted if available
+                            if (typeof chunk.content === 'string' && chunk.content.trim()) {
+                                newData.content = chunk.content;
+                            }
+                            // Add reasoning steps immediately when received
+                            if (chunk.extra_data?.reasoning_steps) {
+                                newData.reasoningSteps = chunk.extra_data.reasoning_steps;
+                            }
+                            break;
+                            
+                        case 'ReasoningStep':
+                        case 'ThinkingStep':
+                        case 'AgentThinking':
+                            // Handle real-time reasoning steps if your backend sends them separately
+                            if (chunk.step || chunk.reasoning_step) {
+                                const step = chunk.step || chunk.reasoning_step;
+                                newData.reasoningSteps = [...(newData.reasoningSteps || []), step];
+                            }
+                            break;
+                            
+                        case 'RunError':
+                            newData.isStreaming = false;
+                            setError(chunk.content || 'An error occurred');
+                            break;
+                    }
+                    
+                    return newData;
+                });
+            };
+            
+            // Show sources after streaming is complete
+            React.useEffect(() => {
+                if (!currentStreamData.isStreaming && storedCrawlUrls.length > 0 && currentStreamData.sources.length === 0) {
+                    const sources = storedCrawlUrls.map(url => {
+                        try {
+                            const urlObj = new URL(url);
+                            return {
+                                url,
+                                domain: urlObj.hostname,
+                                title: url.split('/').pop() || urlObj.pathname || 'Documentation'
+                            };
+                        } catch {
+                            return {
+                                url,
+                                domain: 'Unknown',
+                                title: url
+                            };
+                        }
+                    });
+                    
+                    setCurrentStreamData(prev => ({
+                        ...prev,
+                        sources: sources
+                    }));
+                }
+            }, [currentStreamData.isStreaming, storedCrawlUrls, currentStreamData.sources.length]);
+            
+            // Send message to backend
+            const sendMessage = async () => {
+                if (!query.trim() || urls.filter(url => url.trim()).length === 0) return;
+                
+                const validUrls = urls.filter(url => url.trim());
+                const sessionId = generateSessionId();
+                
+                // Add user message
+                const userMessage = {
+                    role: 'user',
+                    content: query,
+                    created_at: Date.now()
+                };
+                
+                setMessages(prev => [...prev, userMessage]);
+                
+                // Add placeholder agent message
+                const agentMessage = {
+                    role: 'agent',
+                    content: '',
+                    created_at: Date.now() + 1
+                };
+                
+                setMessages(prev => [...prev, agentMessage]);
+                
+                // Reset stream data
+                setCurrentStreamData({
+                    reasoningSteps: [],
+                    content: '',
+                    sources: [],
+                    isStreaming: true
+                });
+                
+                setIsLoading(true);
+                setError(null);
+                setConnectionStatus('connecting');
+                
+                try {
+                    const response = await fetch('http://localhost:8000/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            urls: validUrls,
+                            query: query,
+                            session_id: sessionId,
+                            company_name: companyName
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    setConnectionStatus('connected');
+                    
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = '';
+                    
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        
+                        if (done) break;
+                        
+                        buffer += decoder.decode(value, { stream: true });
+                        
+                        // Parse complete JSON objects from buffer
+                        let jsonStart = buffer.indexOf('{');
+                        while (jsonStart !== -1) {
+                            let braceCount = 0;
+                            let inString = false;
+                            let jsonEnd = -1;
+                            
+                            for (let i = jsonStart; i < buffer.length; i++) {
+                                const char = buffer[i];
+                                
+                                if (char === '"' && buffer[i - 1] !== '\\') {
+                                    inString = !inString;
+                                }
+                                
+                                if (!inString) {
+                                    if (char === '{') braceCount++;
+                                    if (char === '}') braceCount--;
+                                }
+                                
+                                if (braceCount === 0) {
+                                    jsonEnd = i;
+                                    break;
+                                }
+                            }
+                            
+                            if (jsonEnd !== -1) {
+                                const jsonString = buffer.slice(jsonStart, jsonEnd + 1);
+                                try {
+                                    const chunk = JSON.parse(jsonString);
+                                    processStreamChunk(chunk);
+                                } catch (e) {
+                                    console.error('JSON parse error:', e);
+                                }
+                                buffer = buffer.slice(jsonEnd + 1).trim();
+                                jsonStart = buffer.indexOf('{');
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Update final message with content
+                    setMessages(prev => {
+                        const newMessages = [...prev];
+                        const lastMessage = newMessages[newMessages.length - 1];
+                        if (lastMessage && lastMessage.role === 'agent') {
+                            lastMessage.content = currentStreamData.content;
+                        }
+                        return newMessages;
+                    });
+                    
+                } catch (err) {
+                    console.error('Stream error:', err);
+                    setError(err.message || 'Failed to connect to backend');
+                    setConnectionStatus('error');
+                } finally {
+                    setIsLoading(false);
+                    setQuery('');
+                }
+            };
+            
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                sendMessage();
+            };
+            
+            return (
+                <div className="chat-container">
+                    <div className="chat-header">
+                        <h1>🕷️ Interactive Web Crawler Chat</h1>
+                        <p>Ask questions and get answers based on live web crawling</p>
+                    </div>
+                    
+                    <div className="chat-messages">
+                        {messages.map((message, index) => (
+                            <MessageDisplay 
+                                key={index} 
+                                message={message} 
+                                streamData={index === messages.length - 1 ? currentStreamData : {
+                                    reasoningSteps: [],
+                                    content: '',
+                                    sources: [],
+                                    isStreaming: false
+                                }}
+                            />
+                        ))}
+                        <div ref={messagesEndRef} />
+                    </div>
+                    
+                    <div className="chat-input-area">
+                        {connectionStatus !== 'idle' && (
+                            <div className={`connection-status ${connectionStatus}`}>
+                                {connectionStatus === 'connecting' && '🔄 Connecting to backend...'}
+                                {connectionStatus === 'connected' && '✅ Connected to backend'}
+                                {connectionStatus === 'error' && '❌ Connection failed'}
+                            </div>
+                        )}
+                        
+                        {error && (
+                            <div className="error-message">
+                                Error: {error}
+                            </div>
+                        )}
+                        
+                        <form onSubmit={handleSubmit}>
+                            <div className="input-section">
+                                <label className="input-label">URLs to Crawl</label>
+                                <div className="url-inputs">
+                                    {urls.map((url, index) => (
+                                        <div key={index} className="url-input-row">
+                                            <input
+                                                type="url"
+                                                className="input-field"
+                                                placeholder="https://docs.example.com"
+                                                value={url}
+                                                onChange={(e) => updateUrl(index, e.target.value)}
+                                            />
+                                            {urls.length > 1 && (
+                                                <button
+                                                    type="button"
+                                                    className="remove-url-btn"
+                                                    onClick={() => removeUrl(index)}
+                                                >
+                                                    Remove
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        className="add-url-btn"
+                                        onClick={addUrl}
+                                    >
+                                        + Add URL
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div className="input-section">
+                                <label className="input-label">Company Name</label>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    placeholder="Your Company"
+                                    value={companyName}
+                                    onChange={(e) => setCompanyName(e.target.value)}
+                                />
+                            </div>
+                            
+                            <div className="input-section">
+                                <label className="input-label">Your Question</label>
+                                <textarea
+                                    className="input-field"
+                                    rows="3"
+                                    placeholder="What would you like to know? e.g., 'What are the API rate limits?'"
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                />
+                            </div>
+                            
+                            <button
+                                type="submit"
+                                className="send-button"
+                                disabled={isLoading || !query.trim() || urls.filter(url => url.trim()).length === 0}
+                            >
+                                {isLoading ? '🔄 Crawling & Analyzing...' : '🚀 Send Question'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        // Render the app
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
