@@ -77,7 +77,7 @@ class WebCrawlerTool(Toolkit):
 
         sources = {
             "llms_txt": [],
-            "base_page_links": [],
+            "base_page_content": "",
         }
 
         try:
@@ -91,16 +91,18 @@ class WebCrawlerTool(Toolkit):
             total_discovered = len(sources["llms_txt"])
 
             if total_discovered == 0:
-                print("📄 No llms.txt found. Crawling base URL for links...")
+                print("📄 No llms.txt found. Crawling base URL for content...")
                 try:
-                    _, _, base_links = await self.crawl_single_url(input_url)
-                    if base_links:
-                        sources["base_page_links"] = (
-                            base_links  # Return all base page links
+                    _, content, _ = await self.crawl_single_url(input_url)
+                    if content:
+                        sources["base_page_content"] = (
+                            content  # Return full scraped content
                         )
-                        print(f"✅ Found {len(base_links)} links from base page crawl")
+                        print(
+                            f"✅ Found {len(content)} characters of content from base page crawl"
+                        )
                     else:
-                        print("⚠️ No links found on base page")
+                        print("⚠️ No content found on base page")
                 except Exception as e:
                     print(f"⚠️ Base page crawling failed: {e}")
 
@@ -178,7 +180,6 @@ class WebCrawlerTool(Toolkit):
             print(f"❌ Full traceback: {traceback.format_exc()}")
 
         return []
-
 
     def extract_links(self, html_content: str, base_url: str) -> List[str]:
         """Extract all links from HTML content and filter by allowed domains."""
@@ -324,7 +325,7 @@ class WebCrawlerTool(Toolkit):
         self, url_list: List[str]
     ) -> Dict[str, List[Tuple[str, str]]]:
         """Discover URLs from multiple base URLs and combine results with source attribution."""
-        combined_results = {"llms_txt": [], "base_page_links": []}
+        combined_results = {"llms_txt": [], "base_page_content": []}
 
         # Run discovery for each URL concurrently
         tasks = [self.discover_urls_from_sources(url) for url in url_list]
@@ -338,10 +339,17 @@ class WebCrawlerTool(Toolkit):
 
             base_domain = urlparse(url_list[i]).netloc
 
-            # Add URLs with source attribution (base_domain, url)
-            for source_type, urls in result.items():
-                for url in urls:
-                    combined_results[source_type].append((base_domain, url))
+            # Handle different result types
+            if "llms_txt" in result and result["llms_txt"]:
+                # Add URLs with source attribution (base_domain, url)
+                for url in result["llms_txt"]:
+                    combined_results["llms_txt"].append((base_domain, url))
+
+            if "base_page_content" in result and result["base_page_content"]:
+                # Add content with source attribution (base_domain, content)
+                combined_results["base_page_content"].append(
+                    (base_domain, result["base_page_content"])
+                )
 
         return combined_results
 
@@ -372,14 +380,14 @@ class WebCrawlerTool(Toolkit):
                 output.append(f"  [{base_domain}] {i}. {url}")
             output.append("")
 
-
-        # Format base page links (fallback) with source attribution
-        base_links = discovered.get("base_page_links", [])
-        if base_links:
-            total_urls += len(base_links)
-            output.append(f"📄 From base page crawls ({len(base_links)} links found):")
-            for i, (base_domain, url) in enumerate(base_links, 1):
-                output.append(f"  [{base_domain}] {i}. {url}")
+        # Format base page content (fallback) with source attribution
+        base_content = discovered.get("base_page_content", [])
+        if base_content:
+            output.append(f"📄 From base page crawls ({len(base_content)} pages found):")
+            for i, (base_domain, content) in enumerate(base_content, 1):
+                output.append(f"  [{base_domain}] Page {i} ({len(content)} chars):")
+                output.append(f"{content}")
+                output.append("")
             output.append("")
 
         # Summary
@@ -417,14 +425,11 @@ class WebCrawlerTool(Toolkit):
                 output.append(f"  {i}. {url}")
             output.append("")
 
-
-        # Format base page links (fallback)
-        base_links = discovered.get("base_page_links", [])
-        if base_links:
-            total_urls += len(base_links)
-            output.append(f"📄 From base page crawl ({len(base_links)} links found):")
-            for i, url in enumerate(base_links[:15], 1):
-                output.append(f"  {i}. {url}")
+        # Format base page content (fallback)
+        base_content = discovered.get("base_page_content", "")
+        if base_content:
+            output.append(f"📄 From base page crawl ({len(base_content)} chars found):")
+            output.append(f"{base_content}")
             output.append("")
 
         # Summary

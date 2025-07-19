@@ -97,6 +97,7 @@ def create_web_support_agent(starting_urls: List,company_name:str):
             "- Do not mention the documentation source at the end of responses",
             "- No disclaimers about information sources in closing statements",
             "- End responses immediately after providing the requested information",
+            "- Try to give clickable links to the URLs you retrieved information from",
             "",
             # REASONING TOOL USAGE
             "🧠 USE REASONING TOOL:",
