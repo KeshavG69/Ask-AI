@@ -19,6 +19,36 @@
     // Widget state
     let config = { ...defaultConfig };
     let isInitialized = false;
+    let markedLoaded = false;
+    
+    // 🍌🦍 DYNAMIC SCRIPT LOADING WITH APE ENERGY!
+    function loadMarkedJS() {
+        return new Promise((resolve, reject) => {
+            // Check if already loaded
+            if (typeof marked !== 'undefined') {
+                markedLoaded = true;
+                console.log('🍌 Marked.js already available!');
+                resolve();
+                return;
+            }
+            
+            // Create script element
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
+            script.onload = () => {
+                markedLoaded = true;
+                console.log('🦍 Marked.js loaded successfully!');
+                resolve();
+            };
+            script.onerror = () => {
+                console.error('❌ Failed to load Marked.js');
+                reject(new Error('Failed to load Marked.js'));
+            };
+            
+            // Add to head
+            document.head.appendChild(script);
+        });
+    }
     
     // Create widget HTML with exact whisper-wisdom design
     function createWidget() {
@@ -752,127 +782,35 @@
             return 'session_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
         }
         
-        // Enhanced markdown parser with table support
+        // 🚀 RELIABLE MARKDOWN PARSING WITH MARKED.JS - FIXED TABLE RENDERING!
         function parseMarkdown(text) {
             if (!text) return '';
             
-            let html = text;
-            
-            // Parse tables first (before other processing)
-            html = parseMarkdownTables(html);
-            
-            // Headers
-            html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-            html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-            html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-            
-            // Bold and Italic
-            html = html.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
-            html = html.replace(/\*(.*?)\*/gim, '<em>$1</em>');
-            
-            // Code blocks
-            html = html.replace(/```([\s\S]*?)```/gim, '<pre><code>$1</code></pre>');
-            html = html.replace(/`([^`]*)`/gim, '<code>$1</code>');
-            
-            // Lists (improved)
-            html = parseMarkdownLists(html);
-            
-            // Links
-            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/gim, '<a href="$2" target="_blank">$1</a>');
-            
-            // Line breaks (preserve paragraph structure)
-            html = html.replace(/\n\n/gim, '</p><p>');
-            html = html.replace(/\n/gim, '<br>');
-            html = '<p>' + html + '</p>';
-            
-            // Clean up empty paragraphs
-            html = html.replace(/<p><\/p>/gim, '');
-            html = html.replace(/<p><br><\/p>/gim, '');
-            
-            return html;
-        }
-        
-        // Parse markdown tables
-        function parseMarkdownTables(text) {
-            const tableRegex = /(\|.+\|[\r\n]+\|[-:|]+([-:|]*\|)*[\r\n]+((\|.+\|[\r\n]*)+))/gim;
-            
-            return text.replace(tableRegex, (match) => {
-                const lines = match.trim().split('\n');
-                if (lines.length < 3) return match;
+            try {
+                // Wait for marked.js to be available
+                if (typeof marked === 'undefined') {
+                    console.warn('Marked.js not loaded yet, falling back to simple parsing');
+                    return text.replace(/\n/g, '<br>');
+                }
                 
-                const headers = lines[0].split('|').filter(cell => cell.trim()).map(cell => cell.trim());
-                const separator = lines[1]; // Skip separator line
-                const rows = lines.slice(2).map(line => 
-                    line.split('|').filter(cell => cell.trim()).map(cell => cell.trim())
-                );
-                
-                let tableHtml = '<table class="markdown-table">';
-                
-                // Header
-                tableHtml += '<thead><tr>';
-                headers.forEach(header => {
-                    tableHtml += `<th>${header}</th>`;
-                });
-                tableHtml += '</tr></thead>';
-                
-                // Body
-                tableHtml += '<tbody>';
-                rows.forEach(row => {
-                    if (row.length > 0) {
-                        tableHtml += '<tr>';
-                        row.forEach((cell, index) => {
-                            tableHtml += `<td>${cell}</td>`;
-                        });
-                        tableHtml += '</tr>';
-                    }
-                });
-                tableHtml += '</tbody></table>';
-                
-                return tableHtml;
-            });
-        }
-        
-        // Parse markdown lists (improved)
-        function parseMarkdownLists(text) {
-            // Unordered lists
-            let html = text.replace(/^(\s*)[-*+] (.+)$/gim, (match, indent, content) => {
-                const level = Math.floor(indent.length / 2);
-                return `<li data-level="${level}">${content}</li>`;
-            });
-            
-            // Ordered lists
-            html = html.replace(/^(\s*)\d+\. (.+)$/gim, (match, indent, content) => {
-                const level = Math.floor(indent.length / 2);
-                return `<li data-level="${level}" data-ordered="true">${content}</li>`;
-            });
-            
-            // Wrap consecutive list items in ul/ol tags
-            html = html.replace(/(<li[^>]*>.*<\/li>\s*)+/gis, (match) => {
-                const items = match.match(/<li[^>]*>.*?<\/li>/gis) || [];
-                let result = '';
-                let currentList = null;
-                let currentLevel = -1;
-                
-                items.forEach(item => {
-                    const levelMatch = item.match(/data-level="(\d+)"/);
-                    const isOrdered = item.includes('data-ordered="true"');
-                    const level = levelMatch ? parseInt(levelMatch[1]) : 0;
-                    
-                    if (level !== currentLevel || (isOrdered && currentList !== 'ol') || (!isOrdered && currentList !== 'ul')) {
-                        if (currentList) result += `</${currentList}>`;
-                        currentList = isOrdered ? 'ol' : 'ul';
-                        currentLevel = level;
-                        result += `<${currentList}>`;
-                    }
-                    
-                    result += item.replace(/ data-level="\d+"| data-ordered="true"/g, '');
+                // Use marked with clean configuration - no custom renderer!
+                let html = marked.parse(text, {
+                    breaks: true,        // Handle line breaks properly
+                    gfm: true,          // GitHub Flavored Markdown (tables!)
+                    sanitize: false,    // We'll handle sanitization elsewhere if needed
+                    smartypants: false  // Don't convert quotes/dashes
                 });
                 
-                if (currentList) result += `</${currentList}>`;
-                return result;
-            });
-            
-            return html;
+                // 🎯 Add our CSS class to tables via post-processing (SAFE!)
+                html = html.replace(/<table>/g, '<table class="markdown-table">');
+                
+                return html;
+                
+            } catch (error) {
+                console.error('Marked.js parsing error:', error);
+                // Fallback to simple text with line breaks
+                return text.replace(/\n/g, '<br>');
+            }
         }
         
         
@@ -998,7 +936,7 @@
                 const reasoningToggle = document.createElement('div');
                 reasoningToggle.className = 'reasoning-toggle expanded'; // Auto-expand for new reasoning
                 reasoningToggle.innerHTML = `
-                    <h4>Reasoning (Thinking...)</h4>
+                    <h4>Thinking...</h4>
                     <svg class="chevron" viewBox="0 0 24 24">
                         <path d="M7 10l5 5 5-5z"/>
                     </svg>
@@ -1572,7 +1510,7 @@
     
     // Public API
     window.ChatWidget = {
-        init: function(userConfig = {}) {
+        init: async function(userConfig = {}) {
             if (isInitialized) {
                 console.warn('Chat widget is already initialized');
                 return;
@@ -1581,17 +1519,28 @@
             // Merge configuration
             config = { ...defaultConfig, ...userConfig };
             
+            // 🍌🦍 APE ENERGY: Load Marked.js first!
+            console.log('🦍 Loading Marked.js with ape energy...');
+            try {
+                await loadMarkedJS();
+                console.log('🍌 Marked.js ready for action!');
+            } catch (error) {
+                console.warn('⚠️ Marked.js failed to load, using fallback parsing:', error);
+            }
+            
             // Wait for DOM to be ready
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', () => {
                     createWidget();
                     initializeWidget();
                     isInitialized = true;
+                    console.log('🚀 Chat widget initialized with Marked.js support!');
                 });
             } else {
                 createWidget();
                 initializeWidget();
                 isInitialized = true;
+                console.log('🚀 Chat widget initialized with Marked.js support!');
             }
         },
         
