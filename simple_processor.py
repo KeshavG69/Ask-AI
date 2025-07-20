@@ -62,13 +62,24 @@ async def simple_process_stream(
                                 'message': f'Analyzing {len(urls)} pages...'
                             })}\n\n"
                     
-                    # Exa search detection
+                    # Exa search detection - extract URLs from tool args
                     elif tool.tool_name in ["get_contents", "search", "exa_search"]:
-                        yield f"data: {json.dumps({
-                            'type': 'crawling',
-                            'urls': [],
-                            'message': 'Searching the web...'
-                        })}\n\n"
+                        if hasattr(tool, "tool_args") and tool.tool_args:
+                            urls = tool.tool_args.get("urls", [])
+                            crawled_urls.extend(urls)
+                            
+                            yield f"data: {json.dumps({
+                                'type': 'crawling',
+                                'urls': urls,
+                                'message': f'Analyzing {len(urls)} web pages...' if urls else 'Searching the web...'
+                            })}\n\n"
+                        else:
+                            # Fallback for tools without URL args
+                            yield f"data: {json.dumps({
+                                'type': 'crawling',
+                                'urls': [],
+                                'message': 'Searching the web...'
+                            })}\n\n"
 
                     # Reasoning steps - HANDLE BOTH THINK AND ANALYZE TOOLS
                     elif tool.tool_name in ["think", "analyze"]:
