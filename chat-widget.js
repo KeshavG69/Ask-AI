@@ -1362,9 +1362,17 @@
                     const lines = decoder.decode(value).split('\n');
                     
                     for (const line of lines) {
+                        // 🐛 DEBUG: Log every line we process
+                        if (line.trim()) {
+                            console.log('🔍 Processing line:', line.substring(0, 150) + (line.length > 150 ? '...' : ''));
+                        }
+                        
                         if (line.startsWith('data: ')) {
                             try {
                                 const chunk = JSON.parse(line.slice(6));
+                                
+                                // 🐛 DEBUG: Log every chunk type we receive
+                                console.log('📦 Received chunk:', chunk.type, chunk.step?.title || '');
                                 
                                 // 🎯 SYNCHRONIZED CHUNK PROCESSING WITH BUFFERING - NO DUPLICATION!
                                 switch (chunk.type) {
@@ -1393,6 +1401,15 @@
                                         break;
                                         
                                     case 'reasoning':
+                                        // 🐛 DEBUG: Detailed reasoning step logging
+                                        console.log('🧠 REASONING CHUNK RECEIVED:', {
+                                            hasStep: !!chunk.step,
+                                            stepTitle: chunk.step?.title,
+                                            stepNumber: chunk.step_number,
+                                            isNew: chunk.is_new,
+                                            currentReasoningCount: streamData.reasoning.length
+                                        });
+                                        
                                         if (chunk.step) {
                                             // Hide loader on first reasoning step arrival for smooth transition
                                             if (!loaderHidden) {
@@ -1402,10 +1419,17 @@
                                             }
                                             
                                             streamData.reasoning.push(chunk.step);
-                                            console.log(`Added reasoning step: ${chunk.step.title}`);
+                                            console.log(`✅ Added reasoning step: ${chunk.step.title} (Total: ${streamData.reasoning.length})`);
                                             
                                             // Stream only the new step - don't rebuild everything
-                                            appendNewReasoningStep(aiResponseContainer, chunk.step, streamData.reasoning.length === 1);
+                                            try {
+                                                appendNewReasoningStep(aiResponseContainer, chunk.step, streamData.reasoning.length === 1);
+                                                console.log(`✅ Successfully processed reasoning step: ${chunk.step.title}`);
+                                            } catch (error) {
+                                                console.error('❌ Error processing reasoning step:', error, chunk.step);
+                                            }
+                                        } else {
+                                            console.warn('⚠️ Reasoning chunk missing step data:', chunk);
                                         }
                                         break;
                                         

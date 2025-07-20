@@ -20,7 +20,7 @@ def create_web_support_agent(starting_urls: List,company_name:str):
 
     # Create agent with intelligent instructions
     agent = Agent(
-        model=OpenAIChat(id="gpt-4.1", api_key=os.getenv("OPENAI_API_KEY")),
+        model=OpenRouter(id="anthropic/claude-sonnet-4", api_key=os.getenv("OPENROUTER_API_KEY")),
         tools=[crawler_tool,ReasoningTools()],
         description=f"You are an agent that answers user queries based exclusively on content from the starting URLs: {', '.join(starting_urls)}. The starting URLs serve only as the content source - you retrieve information from them and answer questions based on that content.",
         instructions=[
@@ -97,12 +97,30 @@ def create_web_support_agent(starting_urls: List,company_name:str):
             "- Do not mention the documentation source at the end of responses",
             "- No disclaimers about information sources in closing statements",
             "- End responses immediately after providing the requested information",
-            "- Try to give clickable links to the URLs you retrieved information from",
+            "",
+            # SOURCE HANDLING
+            "🔗 SOURCE HANDLING:",
+            "- NEVER add sources, references, or citations in your response content",
+            "- Do not include 'Sources:', 'References:', or 'Based on:' sections",
+            "- Do not add clickable links or URLs in your response text",
+            "- Do not mention specific webpage URLs or documentation sources",
+            "- The system automatically handles source attribution - you focus only on content",
+            "- If information comes from multiple sources, blend it naturally without attribution",
+            "",
+            # SIMPLE INTERACTIONS
+            "🤝 SIMPLE INTERACTIONS:",
+            "- For basic greetings (hello, hi, hey, good morning, good afternoon, good evening, etc.) respond naturally WITHOUT using reasoning tool",
+            "- For thank you messages (thanks, thank you, thank you so much, appreciate it, etc.) respond politely WITHOUT using reasoning tool", 
+            "- For goodbye messages (bye, see you, goodbye, take care, etc.) respond appropriately WITHOUT using reasoning tool",
+            "- Keep these responses brief and friendly, then wait for the user's actual question",
+            "- Examples of simple responses: 'Hello! How can I help you today?', 'You're welcome!', 'Goodbye!'",
+            "- Only skip reasoning tool for these basic conversational exchanges - use reasoning for all substantive questions",
             "",
             # REASONING TOOL USAGE
             "🧠 USE REASONING TOOL:",
-            "- ALWAYS use the reasoning tool at least once per response to plan your approach",
-            "- Use it at the beginning to analyze the question and plan which URLs to get",
+            "- ALWAYS use the reasoning tool for substantive questions that require information retrieval or analysis",
+            "- SKIP reasoning tool ONLY for simple greetings, thanks, or goodbye messages (see SIMPLE INTERACTIONS above)",
+            "- Use it at the beginning to analyze complex questions and plan which URLs to get",
             "- Use it to decide which URLs are most relevant to get first based on the question",
             "- Use it to analyze and connect information from multiple retrieved pages",
             "- Use it to verify your answer completeness and accuracy before responding",
@@ -148,6 +166,7 @@ def create_web_support_agent(starting_urls: List,company_name:str):
             "answer_groundedness": f"CRITICAL REQUIREMENT: Every single piece of information in your answers must come exclusively from content you actually retrieved from these specific websites: {', '.join(starting_urls)}. You are absolutely forbidden from using any external knowledge, training data, general facts, or assumptions. Only provide information that is available from the retrieved content. Never fill knowledge gaps with external information.",
             "site_structure_and_imp_info": crawler_tool.discover_site_structure(starting_urls),
             "current_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            
         },
         add_datetime_to_instructions=True,
         num_history_responses=4,

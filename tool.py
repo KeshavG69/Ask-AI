@@ -70,7 +70,7 @@ class WebCrawlerTool(Toolkit):
         except:
             return url
 
-    async def discover_urls_from_sources(self, input_url: str) -> Dict[str, List[str]]:
+    async def discover_urls_from_sources(self, input_url: str, bypass_cache: bool = False) -> Dict[str, List[str]]:
         """Discover URLs from llms.txt or fallback to base page crawling."""
         root_domain = self._get_root_domain(input_url)
         print(f"🔍 Discovering URLs from: {root_domain}")
@@ -91,9 +91,9 @@ class WebCrawlerTool(Toolkit):
             total_discovered = len(sources["llms_txt"])
 
             if total_discovered == 0:
-                print("📄 No llms.txt found. Crawling base URL for content...")
+                print(f"📄 No llms.txt found. Crawling base URL for content... ({'FRESH' if bypass_cache else 'CACHED'})")
                 try:
-                    _, content, _ = await self.crawl_single_url(input_url)
+                    _, content, _ = await self.crawl_single_url(input_url, bypass_cache)
                     if content:
                         sources["base_page_content"] = (
                             content  # Return full scraped content
@@ -211,11 +211,17 @@ class WebCrawlerTool(Toolkit):
         unique_links = list(dict.fromkeys(links))[: self.max_links_per_page]
         return unique_links
 
-    async def crawl_single_url(self, url: str) -> Tuple[str, str, List[str]]:
+    async def crawl_single_url(self, url: str, bypass_cache: bool = False) -> Tuple[str, str, List[str]]:
         """Crawl a single URL and return content, raw HTML, and links."""
         try:
-            # Simple, fast configuration
+            # Import CacheMode here to avoid circular imports
+            from crawl4ai import CacheMode
+            
+            # Configure crawling with cache mode
+            cache_mode = CacheMode.BYPASS if bypass_cache else CacheMode.ENABLED
+            
             config = CrawlerRunConfig(
+                cache_mode=cache_mode,
                 wait_until="load",
                 delay_before_return_html=2,
                 word_count_threshold=10,
@@ -238,6 +244,8 @@ class WebCrawlerTool(Toolkit):
                 raw_html = result.html or ""
                 links = self.extract_links(raw_html, url)
 
+                print(f"📄 Crawled {url} ({'FRESH' if bypass_cache else 'CACHED'}) - {len(content)} chars")
+                
                 return url, content, links
 
         except Exception as e:
@@ -265,9 +273,8 @@ class WebCrawlerTool(Toolkit):
     def discover_site_structure(self, urls: List[str]) -> str:
         """
         Discover available URLs from llms.txt for agent decision-making.
-
-        This tool returns structured information about all available URLs so the agent can
-        intelligently decide which specific URLs to crawl based on the user's question.
+        
+        Uses caching for site structure discovery (since site structure changes infrequently).
 
         Args:
             urls (List[str]): List of URLs to discover from
@@ -292,20 +299,20 @@ class WebCrawlerTool(Toolkit):
                 return "❌ No valid URLs provided or all URLs outside allowed domains"
 
             print(
-                f"🔍 Discovering site structure for {len(url_list)} URLs: {', '.join([urlparse(u).netloc for u in url_list])}"
+                f"🔍 Discovering site structure for {len(url_list)} URLs: {', '.join([urlparse(u).netloc for u in url_list])} (Cache: ENABLED for discovery)"
             )
 
-            # Handle async discovery properly for multiple URLs
+            # Handle async discovery properly for multiple URLs - use cache for discovery
             try:
                 loop = asyncio.get_running_loop()
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(self._run_multi_discovery, url_list)
+                    future = executor.submit(self._run_multi_discovery, url_list, False)  # Use cache for discovery
                     combined_discovered = future.result()
             except RuntimeError:
                 combined_discovered = asyncio.run(
-                    self._discover_multiple_urls(url_list)
+                    self._discover_multiple_urls(url_list, False)  # Use cache for discovery
                 )
 
             return self._format_multi_discovery_results(combined_discovered, url_list)
@@ -317,18 +324,18 @@ class WebCrawlerTool(Toolkit):
         """Helper method to run discovery in a new event loop."""
         return asyncio.run(self.discover_urls_from_sources(url))
 
-    def _run_multi_discovery(self, url_list):
+    def _run_multi_discovery(self, url_list, bypass_cache=False):
         """Helper method to run multi-URL discovery in a new event loop."""
-        return asyncio.run(self._discover_multiple_urls(url_list))
+        return asyncio.run(self._discover_multiple_urls(url_list, bypass_cache))
 
     async def _discover_multiple_urls(
-        self, url_list: List[str]
+        self, url_list: List[str], bypass_cache: bool = False
     ) -> Dict[str, List[Tuple[str, str]]]:
         """Discover URLs from multiple base URLs and combine results with source attribution."""
         combined_results = {"llms_txt": [], "base_page_content": []}
 
         # Run discovery for each URL concurrently
-        tasks = [self.discover_urls_from_sources(url) for url in url_list]
+        tasks = [self.discover_urls_from_sources(url, bypass_cache) for url in url_list]
         all_results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Combine results from all URLs with source attribution
@@ -452,9 +459,8 @@ class WebCrawlerTool(Toolkit):
     def crawl_selected_urls(self, urls: List[str]) -> str:
         """
         Crawl specific URLs selected by the agent after site structure discovery.
-
-        This tool performs simple, focused crawling of agent-selected URLs without
-        automatic discovery - giving the agent full control over what gets crawled.
+        
+        Always gets fresh content (bypasses cache) to ensure up-to-date information.
 
         Args:
             urls (List[str]): List of URLs to crawl (e.g., ["https://site.com/docs", "https://site.com/faq"])
@@ -475,27 +481,27 @@ class WebCrawlerTool(Toolkit):
             if not url_list:
                 return "❌ No valid URLs provided"
 
-            print(f"🔍 Crawling {len(url_list)} selected URLs...")
+            print(f"🔍 Crawling {len(url_list)} selected URLs... (FRESH content)")
 
-            # Handle async crawling properly
+            # Handle async crawling properly - always bypass cache for content
             try:
                 loop = asyncio.get_running_loop()
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(self._run_simple_crawling, url_list)
+                    future = executor.submit(self._run_simple_crawling, url_list, True)  # Always bypass cache
                     results = future.result()
             except RuntimeError:
-                results = asyncio.run(self._crawl_multiple_urls(url_list))
+                results = asyncio.run(self._crawl_multiple_urls(url_list, True))  # Always bypass cache
 
             return self._format_results(results)
 
         except Exception as e:
             return f"❌ Error in crawl_selected_urls: {str(e)}"
 
-    def _run_simple_crawling(self, urls):
+    def _run_simple_crawling(self, urls, bypass_cache=False):
         """Helper method to run simple crawling in a new event loop."""
-        return asyncio.run(self._crawl_multiple_urls(urls))
+        return asyncio.run(self._crawl_multiple_urls(urls, bypass_cache))
 
     def _run_smart_crawling(self, urls):
         """Helper method to run smart crawling in a new event loop."""
@@ -528,10 +534,10 @@ class WebCrawlerTool(Toolkit):
         return await self._crawl_multiple_urls(final_urls)
 
     async def _crawl_multiple_urls(
-        self, urls: List[str]
+        self, urls: List[str], bypass_cache: bool = False
     ) -> List[Tuple[str, str, List[str]]]:
-        """Crawl multiple URLs concurrently."""
-        tasks = [self.crawl_single_url(url) for url in urls]
+        """Crawl multiple URLs concurrently using Crawl4AI's built-in caching."""
+        tasks = [self.crawl_single_url(url, bypass_cache) for url in urls]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Handle any exceptions in results

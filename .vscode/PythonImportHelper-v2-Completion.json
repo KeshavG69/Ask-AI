@@ -511,7 +511,7 @@
         "kind": 2,
         "importPath": "agent",
         "description": "agent",
-        "peekOfCode": "def create_web_support_agent(starting_urls: List,company_name:str):\n    \"\"\"Create a web support agent with data retrieval capabilities.\"\"\"\n    # Create the crawler tool - it will automatically extract allowed domains from starting URLs\n    crawler_tool = WebCrawlerTool(starting_urls=starting_urls)\n    # Create agent with intelligent instructions\n    agent = Agent(\n        model=OpenAIChat(id=\"gpt-4.1\", api_key=os.getenv(\"OPENAI_API_KEY\")),\n        tools=[crawler_tool,ReasoningTools()],\n        description=f\"You are an agent that answers user queries based exclusively on content from the starting URLs: {', '.join(starting_urls)}. The starting URLs serve only as the content source - you retrieve information from them and answer questions based on that content.\",\n        instructions=[",
+        "peekOfCode": "def create_web_support_agent(starting_urls: List,company_name:str):\n    \"\"\"Create a web support agent with data retrieval capabilities.\"\"\"\n    # Create the crawler tool - it will automatically extract allowed domains from starting URLs\n    crawler_tool = WebCrawlerTool(starting_urls=starting_urls)\n    # Create agent with intelligent instructions\n    agent = Agent(\n        model=OpenRouter(id=\"anthropic/claude-sonnet-4\", api_key=os.getenv(\"OPENROUTER_API_KEY\")),\n        tools=[crawler_tool,ReasoningTools()],\n        description=f\"You are an agent that answers user queries based exclusively on content from the starting URLs: {', '.join(starting_urls)}. The starting URLs serve only as the content source - you retrieve information from them and answer questions based on that content.\",\n        instructions=[",
         "detail": "agent",
         "documentation": {}
     },
@@ -556,7 +556,7 @@
         "kind": 5,
         "importPath": "simple_processor",
         "description": "simple_processor",
-        "peekOfCode": "logger = logging.getLogger(__name__)\nasync def simple_process_stream(raw_stream: AsyncGenerator) -> AsyncGenerator[str, None]:\n    \"\"\"\n    🍌 BANANA PROCESSOR - Now with REAL CONTENT EXTRACTION + NO REPETITION!\n    \"\"\"\n    try:\n        logger.info(\"🍌 BANANA PROCESSOR ACTIVATED - EXTRACTING REAL CONTENT!\")\n        content_buffer = \"\"\n        reasoning_steps = []\n        sent_reasoning_steps = []  # Track what we've already sent to prevent repetition",
+        "peekOfCode": "logger = logging.getLogger(__name__)\nasync def simple_process_stream(\n    raw_stream: AsyncGenerator,\n) -> AsyncGenerator[str, None]:\n    \"\"\"\n    🍌 BANANA PROCESSOR - Now with REAL CONTENT EXTRACTION + NO REPETITION!\n    \"\"\"\n    try:\n        logger.info(\"🍌 BANANA PROCESSOR ACTIVATED - EXTRACTING REAL CONTENT!\")\n        content_buffer = \"\"",
         "detail": "simple_processor",
         "documentation": {}
     },
