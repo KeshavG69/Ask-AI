@@ -50,7 +50,7 @@ async def simple_process_stream(
 
                 if tool and hasattr(tool, "tool_name"):
 
-                    # Crawling detection
+                    # Crawling detection - handle both crawler and Exa tools
                     if tool.tool_name == "crawl_selected_urls":
                         if hasattr(tool, "tool_args") and tool.tool_args:
                             urls = tool.tool_args.get("urls", [])
@@ -61,10 +61,20 @@ async def simple_process_stream(
                                 'urls': urls,
                                 'message': f'Analyzing {len(urls)} pages...'
                             })}\n\n"
+                    
+                    # Exa search detection
+                    elif tool.tool_name in ["get_contents", "search", "exa_search"]:
+                        yield f"data: {json.dumps({
+                            'type': 'crawling',
+                            'urls': [],
+                            'message': 'Searching the web...'
+                        })}\n\n"
 
                     # Reasoning steps - HANDLE BOTH THINK AND ANALYZE TOOLS
                     elif tool.tool_name in ["think", "analyze"]:
-                        logger.info(f"🧠 [REASONING DETECTED] Processing {tool.tool_name} tool")
+                        logger.info(
+                            f"🧠 [REASONING DETECTED] Processing {tool.tool_name} tool"
+                        )
 
                         if hasattr(tool, "tool_args") and tool.tool_args:
                             # Handle different argument structures for think vs analyze tools
@@ -76,14 +86,22 @@ async def simple_process_stream(
                                 }
                             elif tool.tool_name == "analyze":
                                 reasoning_step = {
-                                    "title": tool.tool_args.get("title", "Analyzing..."),
-                                    "thought": tool.tool_args.get("result", ""),  # analyze uses 'result' instead of 'thought'
+                                    "title": tool.tool_args.get(
+                                        "title", "Analyzing..."
+                                    ),
+                                    "thought": tool.tool_args.get(
+                                        "result", ""
+                                    ),  # analyze uses 'result' instead of 'thought'
                                     "confidence": tool.tool_args.get("confidence", 1.0),
                                 }
                             else:
                                 reasoning_step = {
-                                    "title": tool.tool_args.get("title", "Processing..."),
-                                    "thought": tool.tool_args.get("thought", tool.tool_args.get("result", "")),
+                                    "title": tool.tool_args.get(
+                                        "title", "Processing..."
+                                    ),
+                                    "thought": tool.tool_args.get(
+                                        "thought", tool.tool_args.get("result", "")
+                                    ),
                                     "confidence": tool.tool_args.get("confidence", 1.0),
                                 }
 
@@ -141,8 +159,38 @@ async def simple_process_stream(
                 if final_content and isinstance(final_content, str):
                     content_buffer = final_content
 
-                # Process sources
+                # Process sources - handle both crawler URLs and Exa search results
                 sources = []
+                
+                # Extract URLs from Exa search results if present in content
+                try:
+                    # Check if content contains Exa search results (JSON array format)
+                    if content_buffer and '[{' in content_buffer and '"url"' in content_buffer:
+                        # Try to extract JSON from content that might contain Exa results
+                        import re
+                        json_pattern = r'\[{.*?"url".*?}\]'
+                        json_matches = re.findall(json_pattern, content_buffer, re.DOTALL)
+                        
+                        for json_str in json_matches:
+                            try:
+                                import json as json_lib
+                                exa_data = json_lib.loads(json_str)
+                                if isinstance(exa_data, list):
+                                    for item in exa_data:
+                                        if isinstance(item, dict) and 'url' in item:
+                                            from urllib.parse import urlparse
+                                            parsed = urlparse(item['url'])
+                                            sources.append({
+                                                "url": item['url'],
+                                                "domain": parsed.hostname or "Unknown",
+                                                "title": item.get('title', item['url'].split('/')[-1] or "Search Result"),
+                                            })
+                            except:
+                                continue
+                except Exception as e:
+                    logger.warning(f"⚠️ Failed to extract Exa URLs: {e}")
+                
+                # Add regular crawler URLs as sources
                 for url in crawled_urls:
                     try:
                         from urllib.parse import urlparse

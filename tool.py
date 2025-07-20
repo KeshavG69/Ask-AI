@@ -222,7 +222,7 @@ class WebCrawlerTool(Toolkit):
             
             config = CrawlerRunConfig(
                 cache_mode=cache_mode,
-                wait_until="load",
+                wait_until="domcontentloaded",
                 delay_before_return_html=2,
                 word_count_threshold=10,
             )
