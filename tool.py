@@ -458,15 +458,102 @@ class WebCrawlerTool(Toolkit):
 
     def crawl_selected_urls(self, urls: List[str]) -> str:
         """
-        Crawl specific URLs selected by the agent after site structure discovery.
+        Crawl specific URLs selected by the agent to retrieve fresh, up-to-date content.
         
-        Always gets fresh content (bypasses cache) to ensure up-to-date information.
+        This is the primary method for content retrieval, typically used after calling 
+        discover_site_structure() to identify relevant URLs. It performs concurrent crawling
+        of multiple URLs while respecting domain restrictions and always bypasses cache
+        to ensure the most current information is retrieved.
+
+        PURPOSE & WORKFLOW:
+        - Used by AI agents after site structure discovery to get specific content
+        - Part of a two-step process: 1) discover_site_structure() → 2) crawl_selected_urls()
+        - Retrieves fresh content for real-time information needs
+        - Handles multiple URLs concurrently for efficiency
+
+        PROCESSING BEHAVIOR:
+        - Always bypasses cache to ensure fresh content retrieval
+        - Validates and normalizes all input URLs
+        - Filters URLs to ensure they're within allowed domains
+        - Performs concurrent crawling using asyncio for performance
+        - Extracts content using prioritized methods: markdown > cleaned_html > raw_text
+        - Discovers additional links from each page for potential follow-up crawling
+        - Handles individual URL failures gracefully without stopping the entire process
+
+        DOMAIN RESTRICTIONS:
+        - Only crawls URLs within domains specified during WebCrawlerTool initialization
+        - Automatically validates each URL against allowed domains before crawling
+        - Skips invalid or restricted URLs with appropriate logging
 
         Args:
-            urls (List[str]): List of URLs to crawl (e.g., ["https://site.com/docs", "https://site.com/faq"])
+            urls (List[str]): List of URLs to crawl. Each URL should be:
+                - Fully qualified (https://example.com/page) or will be normalized
+                - Within the allowed domains set during tool initialization
+                - Accessible and valid (invalid URLs will be skipped)
+                - Examples: ["https://docs.example.com/api", "https://support.example.com/faq"]
+                - Recommended: 2-8 URLs per call for optimal performance
 
         Returns:
-            str: Formatted content from crawled pages
+            str: Comprehensive formatted report containing:
+                
+                === CRAWLED CONTENT ===
+                For each successfully crawled URL:
+                - URL: The actual URL that was crawled
+                - Content Length: Character count of extracted content
+                - Content: Full extracted content (markdown, cleaned HTML, or text)
+                
+                === CRAWLING SUMMARY ===
+                - Total URLs crawled: Number of successful crawls
+                - Total content extracted: Combined character count
+                
+                === DISCOVERED LINKS ===
+                For each crawled page:
+                - From [URL] (X links found): Source URL and link count
+                - List of discovered links (up to 15 most relevant per page)
+                - Total unique links discovered: Overall link count
+                
+                Note: Content is not truncated - full content from each page is included
+
+        Examples:
+            Basic usage:
+            >>> crawler = WebCrawlerTool(starting_urls=["https://docs.example.com"])
+            >>> result = crawler.crawl_selected_urls(["https://docs.example.com/api"])
+            
+            Multiple URLs:
+            >>> urls_to_crawl = [
+            ...     "https://docs.example.com/getting-started",
+            ...     "https://docs.example.com/api-reference", 
+            ...     "https://support.example.com/faq"
+            ... ]
+            >>> result = crawler.crawl_selected_urls(urls_to_crawl)
+
+        Technical Details:
+            - Uses crawl4ai library with AsyncWebCrawler for robust content extraction
+            - Employs concurrent processing via asyncio.gather() for performance
+            - Implements 2-second delay before HTML return for dynamic content loading
+            - Waits for 'domcontentloaded' event to ensure page readiness
+            - Handles exceptions per URL without failing the entire operation
+            - Memory efficient - processes results as they complete
+
+        Error Handling:
+            - Individual URL failures are logged but don't stop other crawls
+            - Invalid URLs are skipped with appropriate error messages
+            - Domain restriction violations are filtered out with warnings  
+            - Network timeouts and connection errors are handled gracefully
+            - Returns partial results even if some URLs fail
+
+        Performance Notes:
+            - Optimal batch size: 2-8 URLs per call
+            - Concurrent processing reduces total execution time
+            - Fresh content retrieval may take longer than cached content
+            - Processing time scales with content size and page complexity
+            - Network latency affects overall performance
+
+        Integration Notes:
+            - Designed for use by AI agents in question-answering workflows
+            - Output format optimized for agent consumption and analysis
+            - Works in conjunction with discover_site_structure() for site exploration
+            - Content extraction prioritizes readability and structure preservation
         """
         try:
             # Parse and validate URLs
