@@ -37,7 +37,7 @@ COPY pyproject.toml ./
 RUN uv sync
 
 # Install Playwright Chromium (this adds ~300MB)
-RUN pip install playwright && playwright install chromium
+
 
 # Create app directory & copy code
 WORKDIR /app
