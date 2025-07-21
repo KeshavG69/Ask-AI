@@ -16,11 +16,12 @@ WORKDIR /app
 COPY pyproject.toml ./
 RUN uv sync
 
-# Install Playwright Chromium
-RUN uv run playwright install chromium
-
 # Copy app code
 COPY . .
+
+# Configure Playwright to use system Chromium
+ENV PLAYWRIGHT_BROWSERS_PATH=0
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
 EXPOSE 8000
 CMD ["uv", "run", "server.py"]
