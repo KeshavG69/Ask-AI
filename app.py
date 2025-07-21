@@ -101,7 +101,7 @@ async def chat_agent(request: ChatRequest):
 
         # Create new agent with provided URLs
         agent = create_web_support_agent(
-            starting_urls=request.urls, company_name=request.company_name
+            starting_urls=request.urls, company_name=request.company_name,session_id=request.session_id
         )
 
         logger.info(f"✅ Agent created successfully for {len(request.urls)} URLs")
@@ -110,7 +110,7 @@ async def chat_agent(request: ChatRequest):
         return StreamingResponse(
             stream_chat_response(
                 request.query,
-                agent,
+                agent
             ),
             media_type="text/event-stream",
         )

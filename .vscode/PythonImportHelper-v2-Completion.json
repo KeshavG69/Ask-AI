@@ -76,6 +76,14 @@
         "documentation": {}
     },
     {
+        "label": "Groq",
+        "importPath": "agno.models.groq",
+        "description": "agno.models.groq",
+        "isExtraImport": true,
+        "detail": "agno.models.groq",
+        "documentation": {}
+    },
+    {
         "label": "WebCrawlerTool",
         "importPath": "tool",
         "description": "tool",
@@ -249,6 +257,22 @@
         "description": "datetime",
         "isExtraImport": true,
         "detail": "datetime",
+        "documentation": {}
+    },
+    {
+        "label": "ExaTools",
+        "importPath": "agno.tools.exa",
+        "description": "agno.tools.exa",
+        "isExtraImport": true,
+        "detail": "agno.tools.exa",
+        "documentation": {}
+    },
+    {
+        "label": "MongoDbStorage",
+        "importPath": "agno.storage.mongodb",
+        "description": "agno.storage.mongodb",
+        "isExtraImport": true,
+        "detail": "agno.storage.mongodb",
         "documentation": {}
     },
     {
@@ -511,7 +535,16 @@
         "kind": 2,
         "importPath": "agent",
         "description": "agent",
-        "peekOfCode": "def create_web_support_agent(starting_urls: List,company_name:str):\n    \"\"\"Create a web support agent with data retrieval capabilities.\"\"\"\n    # Create the crawler tool - it will automatically extract allowed domains from starting URLs\n    crawler_tool = WebCrawlerTool(starting_urls=starting_urls)\n    # Create agent with intelligent instructions\n    agent = Agent(\n        model=OpenRouter(id=\"anthropic/claude-sonnet-4\", api_key=os.getenv(\"OPENROUTER_API_KEY\")),\n        tools=[crawler_tool,ReasoningTools()],\n        description=f\"You are an agent that answers user queries based exclusively on content from the starting URLs: {', '.join(starting_urls)}. The starting URLs serve only as the content source - you retrieve information from them and answer questions based on that content.\",\n        instructions=[",
+        "peekOfCode": "def create_web_support_agent(starting_urls: List,company_name:str,storage=storage,session_id:str=None) -> Agent:\n    \"\"\"Create a web support agent with data retrieval capabilities.\"\"\"\n    # Create the crawler tool - it will automatically extract allowed domains from starting URLs\n    crawler_tool = WebCrawlerTool(starting_urls=starting_urls)\n    # Create agent with intelligent instructions\n    agent = Agent(\n        model=OpenRouter(id=\"openai/gpt-4.1-mini\", api_key=os.getenv(\"OPENROUTER_API_KEY\")),\n        tools=[crawler_tool,ReasoningTools(),ExaTools(os.getenv(\"EXA_API_KEY\"),highlights=False,include_domains=starting_urls,get_contents=True,find_similar=False,answer=False,text=True,summary=False,livecrawl=\"preferred\")],\n        description=f\"You are an agent that answers user queries based exclusively on content from the starting URLs: {', '.join(starting_urls)}. The starting URLs serve only as the content source - you retrieve information from them and answer questions based on that content.\",\n        instructions=[",
+        "detail": "agent",
+        "documentation": {}
+    },
+    {
+        "label": "storage",
+        "kind": 5,
+        "importPath": "agent",
+        "description": "agent",
+        "peekOfCode": "storage = MongoDbStorage(\n    # store sessions in the agent_sessions collection\n    collection_name=\"agent_sessions\",\n    db_url=os.getenv(\"MONGODB_URL\"),\n    db_name=os.getenv(\"MONGODB_DB\")\n)\ndef create_web_support_agent(starting_urls: List,company_name:str,storage=storage,session_id:str=None) -> Agent:\n    \"\"\"Create a web support agent with data retrieval capabilities.\"\"\"\n    # Create the crawler tool - it will automatically extract allowed domains from starting URLs\n    crawler_tool = WebCrawlerTool(starting_urls=starting_urls)",
         "detail": "agent",
         "documentation": {}
     },

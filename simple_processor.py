@@ -62,24 +62,13 @@ async def simple_process_stream(
                                 'message': f'Analyzing {len(urls)} pages...'
                             })}\n\n"
                     
-                    # Exa search detection - extract URLs from tool args
-                    elif tool.tool_name in ["get_contents", "search", "exa_search"]:
-                        if hasattr(tool, "tool_args") and tool.tool_args:
-                            urls = tool.tool_args.get("urls", [])
-                            crawled_urls.extend(urls)
-                            
-                            yield f"data: {json.dumps({
-                                'type': 'crawling',
-                                'urls': urls,
-                                'message': f'Analyzing {len(urls)} web pages...' if urls else 'Searching the web...'
-                            })}\n\n"
-                        else:
-                            # Fallback for tools without URL args
-                            yield f"data: {json.dumps({
-                                'type': 'crawling',
-                                'urls': [],
-                                'message': 'Searching the web...'
-                            })}\n\n"
+                    # Exa search detection - just show search message, URLs come from result
+                    elif tool.tool_name in ["get_contents", "search", "exa_search", "search_exa"]:
+                        yield f"data: {json.dumps({
+                            'type': 'crawling',
+                            'urls': [],
+                            'message': 'Searching the web...'
+                        })}\n\n"
 
                     # Reasoning steps - HANDLE BOTH THINK AND ANALYZE TOOLS
                     elif tool.tool_name in ["think", "analyze"]:
@@ -163,6 +152,44 @@ async def simple_process_stream(
                 else:
                     logger.warning(f"⚠️ [TOOL ERROR] Invalid tool object: {tool}")
 
+            # 🔍 TOOL CALL COMPLETED - Extract URLs from Exa search results
+            elif event == RunEvent.tool_call_completed:
+                tool = getattr(chunk, "tool", None)
+                logger.info(
+                    f"🔍 [TOOL_CALL_COMPLETED] Tool: {tool.tool_name if tool and hasattr(tool, 'tool_name') else 'None'}"
+                )
+                
+                if tool and hasattr(tool, "tool_name") and tool.tool_name in ["search_exa", "exa_search", "get_contents"]:
+                    # Extract URLs from Exa search results
+                    result = getattr(tool, "result", None)
+                    if result:
+                        try:
+                            import json as json_lib
+                            # Parse the result if it's a JSON string
+                            if isinstance(result, str):
+                                exa_data = json_lib.loads(result)
+                            else:
+                                exa_data = result
+                            
+                            if isinstance(exa_data, list):
+                                extracted_urls = []
+                                for item in exa_data:
+                                    if isinstance(item, dict) and 'url' in item:
+                                        extracted_urls.append(item['url'])
+                                        crawled_urls.append(item['url'])
+                                
+                                if extracted_urls:
+                                    logger.info(f"🔍 Extracted {len(extracted_urls)} URLs from Exa search result")
+                                    # Send crawling update with actual URLs
+                                    yield f"data: {json.dumps({
+                                        'type': 'crawling',
+                                        'urls': extracted_urls,
+                                        'message': f'Found {len(extracted_urls)} relevant sources...'
+                                    })}\n\n"
+                                    
+                        except Exception as e:
+                            logger.warning(f"⚠️ Failed to extract URLs from Exa result: {e}")
+
             # 📦 COMPLETION - FINAL PACKAGE
             elif event == RunEvent.run_completed:
                 # Final content if provided
@@ -175,18 +202,21 @@ async def simple_process_stream(
                 
                 # Extract URLs from Exa search results if present in content
                 try:
-                    # Check if content contains Exa search results (JSON array format)
-                    if content_buffer and '[{' in content_buffer and '"url"' in content_buffer:
-                        # Try to extract JSON from content that might contain Exa results
+                    # Look for Exa search results in content buffer - more robust JSON extraction
+                    if content_buffer and ('"url":' in content_buffer or "'url':" in content_buffer):
+                        # Try multiple patterns to find JSON arrays with URL objects
                         import re
-                        json_pattern = r'\[{.*?"url".*?}\]'
+                        import json as json_lib
+                        
+                        # Pattern 1: Complete JSON array
+                        json_pattern = r'\[\s*{[^}]*"url"[^}]*}[^]]*\]'
                         json_matches = re.findall(json_pattern, content_buffer, re.DOTALL)
                         
                         for json_str in json_matches:
                             try:
-                                import json as json_lib
                                 exa_data = json_lib.loads(json_str)
                                 if isinstance(exa_data, list):
+                                    logger.info(f"🔍 Found Exa search results: {len(exa_data)} items")
                                     for item in exa_data:
                                         if isinstance(item, dict) and 'url' in item:
                                             from urllib.parse import urlparse
@@ -196,32 +226,65 @@ async def simple_process_stream(
                                                 "domain": parsed.hostname or "Unknown",
                                                 "title": item.get('title', item['url'].split('/')[-1] or "Search Result"),
                                             })
-                            except:
+                                            crawled_urls.append(item['url'])  # Add to crawled_urls too
+                            except Exception as parse_error:
+                                logger.warning(f"⚠️ Failed to parse Exa JSON: {parse_error}")
                                 continue
+                        
+                        # Pattern 2: Individual URL extraction as fallback
+                        if not json_matches:
+                            url_pattern = r'"url":\s*"([^"]+)"'
+                            url_matches = re.findall(url_pattern, content_buffer)
+                            title_pattern = r'"title":\s*"([^"]+)"'
+                            title_matches = re.findall(title_pattern, content_buffer)
+                            
+                            for i, url in enumerate(url_matches):
+                                from urllib.parse import urlparse
+                                parsed = urlparse(url)
+                                title = title_matches[i] if i < len(title_matches) else url.split('/')[-1] or "Search Result"
+                                sources.append({
+                                    "url": url,
+                                    "domain": parsed.hostname or "Unknown", 
+                                    "title": title,
+                                })
+                                crawled_urls.append(url)
+                                
+                            if url_matches:
+                                logger.info(f"🔍 Extracted {len(url_matches)} URLs from Exa results (fallback method)")
+                                
                 except Exception as e:
                     logger.warning(f"⚠️ Failed to extract Exa URLs: {e}")
                 
-                # Add regular crawler URLs as sources
+                # Add regular crawler URLs as sources (avoid duplicates)
+                existing_urls = {source['url'] for source in sources}
                 for url in crawled_urls:
-                    try:
-                        from urllib.parse import urlparse
+                    if url not in existing_urls:
+                        try:
+                            from urllib.parse import urlparse
+                            parsed = urlparse(url)
+                            sources.append(
+                                {
+                                    "url": url,
+                                    "domain": parsed.hostname or "Unknown",
+                                    "title": url.split("/")[-1] or "Documentation",
+                                }
+                            )
+                        except:
+                            sources.append({"url": url, "domain": "Unknown", "title": url})
 
-                        parsed = urlparse(url)
-                        sources.append(
-                            {
-                                "url": url,
-                                "domain": parsed.hostname or "Unknown",
-                                "title": url.split("/")[-1] or "Documentation",
-                            }
-                        )
-                    except:
-                        sources.append({"url": url, "domain": "Unknown", "title": url})
+                # Remove duplicate sources by URL
+                unique_sources = []
+                seen_urls = set()
+                for source in sources:
+                    if source['url'] not in seen_urls:
+                        unique_sources.append(source)
+                        seen_urls.add(source['url'])
 
                 yield f"data: {json.dumps({
                     'type': 'completion',
                     'final_content': content_buffer,
-                    'sources': sources,
-                    'crawled_urls': crawled_urls
+                    'sources': unique_sources,
+                    'crawled_urls': list(set(crawled_urls))  # Remove duplicates from crawled_urls too
                 })}\n\n"
 
             # 🚨 ERROR HANDLING

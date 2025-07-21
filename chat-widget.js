@@ -863,6 +863,50 @@
             activeStreamingTimeouts = [];
         }
         
+        // Auto-close reasoning section with smooth animation
+        function autoCloseReasoningSection(aiResponseDiv) {
+            const reasoningToggle = aiResponseDiv.querySelector('.reasoning-toggle');
+            const reasoningContent = aiResponseDiv.querySelector('.reasoning-content');
+            
+            if (reasoningToggle && reasoningContent && reasoningToggle.classList.contains('expanded')) {
+                console.log('🎯 Auto-closing reasoning section after completion');
+                
+                // Add smooth transition delay for better UX
+                setTimeout(() => {
+                    reasoningToggle.classList.remove('expanded');
+                    reasoningContent.classList.remove('expanded');
+                    
+                    // Update header text to indicate completion
+                    const reasoningTitle = reasoningToggle.querySelector('h4');
+                    if (reasoningTitle) {
+                        reasoningTitle.textContent = 'Thinking Complete';
+                    }
+                    
+                    // Smooth scroll to content after reasoning closes
+                    setTimeout(() => {
+                        smoothScrollToContent(aiResponseDiv);
+                    }, 300); // Wait for collapse animation
+                    
+                }, 1000); // Wait 1 second after reasoning completes
+            }
+        }
+        
+        // Smooth scroll to show content after reasoning section closes
+        function smoothScrollToContent(aiResponseDiv) {
+            const contentSection = aiResponseDiv.querySelector('.content-section');
+            if (contentSection) {
+                console.log('📜 Smooth scrolling to content');
+                contentSection.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start',
+                    inline: 'nearest'
+                });
+            } else {
+                // Fallback to regular scroll to bottom
+                scrollToBottom();
+            }
+        }
+        
         function streamTextWordByWord(element, fullText, onComplete) {
             const words = fullText.split(' ');
             let currentIndex = 0;
@@ -966,6 +1010,9 @@
                 aiResponseDiv.appendChild(reasoningContainer);
             }
             
+            // Set current AI response div for auto-close functionality
+            streamingCoordinator.currentAiResponseDiv = aiResponseDiv;
+            
             // Get reasoning content inner div
             const reasoningContentInner = reasoningContainer?.querySelector('.reasoning-content-inner');
             if (reasoningContentInner) {
@@ -1014,6 +1061,9 @@
                     </div>
                 `;
                 aiResponseDiv.appendChild(contentDiv);
+                
+                // Auto-close reasoning section when actual content starts appearing
+                autoCloseReasoningSection(aiResponseDiv);
             }
             
             scrollToBottom();
@@ -1386,6 +1436,12 @@
                                         
                                         streamData.content = chunk.full_content || chunk.text;
                                         streamData.isStreaming = true;
+                                        
+                                        // 🎯 AUTO-CLOSE REASONING AS SOON AS CONTENT ARRIVES - EVEN IF REASONING IS STILL STREAMING
+                                        if (streamingCoordinator.reasoningActive && aiResponseContainer) {
+                                            console.log('🎯 Content arrived - auto-closing reasoning section while still streaming!');
+                                            autoCloseReasoningSection(aiResponseContainer);
+                                        }
                                         
                                         // 🎯 IF REASONING IS STILL STREAMING, ONLY BUFFER - DON'T DISPLAY!
                                         if (streamingCoordinator.reasoningActive) {

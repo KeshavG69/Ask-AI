@@ -12,9 +12,20 @@ from datetime import datetime
 from agno.tools.exa import ExaTools
 
 load_dotenv()
+from agno.storage.mongodb import MongoDbStorage
 
 
-def create_web_support_agent(starting_urls: List,company_name:str):
+
+# Create a storage backend using the Mongo database
+storage = MongoDbStorage(
+    # store sessions in the agent_sessions collection
+    collection_name="agent_sessions",
+    db_url=os.getenv("MONGODB_URL"),
+    db_name=os.getenv("MONGODB_DB")
+)
+
+
+def create_web_support_agent(starting_urls: List,company_name:str,storage=storage,session_id:str=None) -> Agent:
     """Create a web support agent with data retrieval capabilities."""
 
     # Create the crawler tool - it will automatically extract allowed domains from starting URLs
@@ -114,13 +125,18 @@ def create_web_support_agent(starting_urls: List,company_name:str):
             "site_structure_and_imp_info": crawler_tool.discover_site_structure(starting_urls),
             "current_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "formatting":"follow the rrules given in the <format_rules> section Also always give detailed answers and use tables wherver possible to show data .",
-            "importan_rules":"Always follow the <workflow> section"
+            "importan_rules":"Always follow the <workflow> section Never use your own knowledge or training data to answer questions. Always use the reasoning tool before running any other tool. Never use external knowledge, training data, general facts, or assumptions. Only provide information that is available from the retrieved content. Never fill knowledge gaps with external information.",
             
         },
         add_datetime_to_instructions=True,
         num_history_responses=4,
         user_id=company_name,
-        telemetry=False
+        telemetry=False,
+        add_history_to_messages=True,
+        storage=storage,
+        read_chat_history=True,
+        session_id=session_id
+
     )
 
     return agent
@@ -128,28 +144,3 @@ def create_web_support_agent(starting_urls: List,company_name:str):
 
 
 
-async def stream_agent_response(
-    query: str, 
-    agent: Agent, 
-) -> AsyncGenerator:
-    try:
-
-        # Run the agent with the query and stream the results
-        response_stream = await agent.arun(
-            query, stream=True, stream_intermediate_steps=True
-        )
-
-
-        # Stream all response chunks first
-        async for run_response_chunk in response_stream:
-            run_response_chunk = cast(RunResponse, run_response_chunk)
-            yield run_response_chunk.to_json()
-
-
-    except Exception as e:
-        error_response = RunResponse(
-            content=str(e),
-            event=RunEvent.run_error,
-        )
-        yield error_response.to_json()
-        return
