@@ -57,7 +57,7 @@ COPY uv.lock* ./
 RUN uv sync
 
 # Install Playwright browsers and system dependencies
-RUN uv run playwright install --with-deps
+RUN uv run playwright install
 
 # Copy application code
 COPY . .
