@@ -35,11 +35,15 @@ async def simple_process_stream(
                 if content and isinstance(content, str):
                     content_buffer += content
 
-                    yield f"data: {json.dumps({
-                        'type': 'content',
-                        'text': content,
-                        'full_content': content_buffer
-                    })}\n\n"
+                    yield (
+    f"data: {json.dumps({ 
+        'type': 'content',
+        'text': content,
+        'full_content': content_buffer
+    })}\n\n"
+)
+
+
 
             # 🧠 REASONING EXTRACTION WITH ENHANCED DEBUG
             elif event == RunEvent.tool_call_started:
