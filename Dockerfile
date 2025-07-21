@@ -26,22 +26,20 @@ RUN apt-get update && apt-get install -y \
     libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install pip & uv
+# Upgrade pip & install uv tool
 RUN pip install --upgrade pip && pip install uv
 
-# Install torch with CPU wheels only (saves GBs)
+# Install torch (CPU-only wheels)
 RUN pip install torch==2.7.1 --extra-index-url https://download.pytorch.org/whl/cpu
 
-# Install other Python deps separately to leverage Docker caching
+# Install other Python dependencies
 COPY pyproject.toml ./
 RUN uv sync
 
-# Install Playwright Chromium (this adds ~300MB)
-
-
-# Create app directory & copy code
+RUN pip install playwright && playwright install chromium
+# Set working directory & copy app code
 WORKDIR /app
 COPY . .
 
-# Expose dynamic port (Render/Heroku style)
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
+# Expose app on Render's dynamic port
+CMD ["sh", "-c", "uvicorn server:app --host 0.0.0.0 --port $PORT"]
