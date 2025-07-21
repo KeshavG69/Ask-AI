@@ -34,7 +34,7 @@ RUN pip install torch==2.7.1 --extra-index-url https://download.pytorch.org/whl/
 
 # Install other Python dependencies
 COPY pyproject.toml ./
-RUN uv sync
+RUN uv sync && pip install uvicorn
 
 RUN pip install playwright && playwright install chromium
 # Set working directory & copy app code
