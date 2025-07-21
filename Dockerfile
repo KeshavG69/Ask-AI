@@ -25,6 +25,24 @@ RUN apt-get update && apt-get install -y \
     libasound2 \
     libatspi2.0-0 \
     libgtk-3-0 \
+    # Missing libraries from error
+    libgstreamer1.0-0 \
+    libgtk-4-1 \
+    libgraphene-1.0-0 \
+    libatomic1 \
+    libxslt1.1 \
+    libvpx7 \
+    libevent-2.1-7 \
+    libopus0 \
+    libavif15 \
+    libenchant-2-2 \
+    libsecret-1-0 \
+    libmanette-0.2-0 \
+    libgles2-mesa \
+    # GStreamer plugins
+    libgstreamer-plugins-base1.0-0 \
+    libgstgl-1.0-0 \
+    libgstcodecparsers-1.0-0 \
     # Fonts
     fonts-liberation \
     fonts-noto-cjk \
@@ -56,16 +74,11 @@ COPY uv.lock* ./
 # Install Python dependencies using uv
 RUN uv sync
 
-# Install Playwright browsers and system dependencies
-RUN uv run playwright install
+# Install only Chromium browser to keep image size smaller
+RUN uv run playwright install chromium
 
 # Copy application code
 COPY . .
-
-# Create non-root user for security
-RUN useradd -m -u 1000 appuser && \
-    chown -R appuser:appuser /app
-USER appuser
 
 # Set display for headless browsers
 ENV DISPLAY=:99
