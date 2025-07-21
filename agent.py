@@ -33,7 +33,7 @@ def create_web_support_agent(starting_urls: List,company_name:str,storage=storag
 
     # Create agent with intelligent instructions
     agent = Agent(
-        model=OpenRouter(id="openai/gpt-4.1-mini", api_key=os.getenv("OPENROUTER_API_KEY")),
+        model=OpenAIChat(id="gpt-4.1-mini", api_key=os.getenv("OPENAI_API_KEY")),
         tools=[crawler_tool,ReasoningTools(),ExaTools(os.getenv("EXA_API_KEY"),highlights=False,include_domains=starting_urls,get_contents=True,find_similar=False,answer=False,text=True,summary=False,livecrawl="preferred")],
         description=f"You are an agent that answers user queries based exclusively on content from the starting URLs: {', '.join(starting_urls)}. The starting URLs serve only as the content source - you retrieve information from them and answer questions based on that content.",
         instructions=[
