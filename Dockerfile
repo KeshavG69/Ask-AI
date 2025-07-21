@@ -27,14 +27,14 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Upgrade pip & install uv tool
-RUN pip install --upgrade pip && pip install uv
+RUN pip install --upgrade pip 
 
 # Install torch (CPU-only wheels)
 RUN pip install torch==2.7.1 --extra-index-url https://download.pytorch.org/whl/cpu
 
 # Install other Python dependencies
-COPY pyproject.toml ./
-RUN uv sync && pip install uvicorn
+COPY requirements.txt ./
+RUN pip install -r requirements.txt
 
 RUN pip install playwright && playwright install chromium
 # Set working directory & copy app code
