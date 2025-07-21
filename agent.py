@@ -136,7 +136,7 @@ def create_web_support_agent(
             "answer_groundedness": f"CRITICAL REQUIREMENT: Every single piece of information in your answers must come exclusively from content you actually retrieved from these specific websites: {', '.join(starting_urls)}. You are absolutely forbidden from using any external knowledge, training data, general facts, or assumptions. Only provide information that is available from the retrieved content. Never fill knowledge gaps with external information.",
             "reasoning_tool_usage": "MANDATORY REASONING: Use the reasoning tool systematically throughout your process. Start with question analysis, reason through URL selection, analyze retrieved content for gaps, synthesize information from multiple sources, and validate answer completeness. The reasoning tool is your primary analytical framework - use it to think through each step methodically before taking action.Always use the reasoning tool first before running any other tool.",
             "site_structure_and_imp_info": crawler_tool.discover_site_structure(
-                starting_urls
+                starting_urls[0]
             ),
             "current_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "formatting": "follow the rrules given in the <format_rules> section Also always give detailed answers and use tables wherver possible to show data .",
