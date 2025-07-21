@@ -60,27 +60,11 @@
         "documentation": {}
     },
     {
-        "label": "OpenRouter",
-        "importPath": "agno.models.openrouter",
-        "description": "agno.models.openrouter",
-        "isExtraImport": true,
-        "detail": "agno.models.openrouter",
-        "documentation": {}
-    },
-    {
         "label": "OpenAIChat",
         "importPath": "agno.models.openai",
         "description": "agno.models.openai",
         "isExtraImport": true,
         "detail": "agno.models.openai",
-        "documentation": {}
-    },
-    {
-        "label": "Groq",
-        "importPath": "agno.models.groq",
-        "description": "agno.models.groq",
-        "isExtraImport": true,
-        "detail": "agno.models.groq",
         "documentation": {}
     },
     {
