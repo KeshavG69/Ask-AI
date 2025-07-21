@@ -5,7 +5,7 @@ from agno.models.openai import OpenAIChat
 from tool import WebCrawlerTool
 from agno.tools.reasoning import ReasoningTools
 import os
-from typing import AsyncGenerator,cast,List
+from typing import AsyncGenerator, cast, List
 from agno.run.response import RunEvent, RunResponse
 from dotenv import load_dotenv
 from datetime import datetime
@@ -15,17 +15,18 @@ load_dotenv()
 from agno.storage.mongodb import MongoDbStorage
 
 
-
 # Create a storage backend using the Mongo database
 storage = MongoDbStorage(
     # store sessions in the agent_sessions collection
     collection_name="agent_sessions",
     db_url=os.getenv("MONGODB_URL"),
-    db_name=os.getenv("MONGODB_DB")
+    db_name=os.getenv("MONGODB_DB"),
 )
 
 
-def create_web_support_agent(starting_urls: List,company_name:str,storage=storage,session_id:str=None) -> Agent:
+def create_web_support_agent(
+    starting_urls: List, company_name: str, storage=storage, session_id: str = None
+) -> Agent:
     """Create a web support agent with data retrieval capabilities."""
 
     # Create the crawler tool - it will automatically extract allowed domains from starting URLs
@@ -34,13 +35,26 @@ def create_web_support_agent(starting_urls: List,company_name:str,storage=storag
     # Create agent with intelligent instructions
     agent = Agent(
         model=OpenAIChat(id="gpt-4.1-mini", api_key=os.getenv("OPENAI_API_KEY")),
-        tools=[crawler_tool,ReasoningTools(),ExaTools(os.getenv("EXA_API_KEY"),highlights=False,include_domains=starting_urls,get_contents=True,find_similar=False,answer=False,text=True,summary=False,livecrawl="preferred")],
+        tools=[
+            crawler_tool,
+            ReasoningTools(),
+            ExaTools(
+                os.getenv("EXA_API_KEY"),
+                highlights=False,
+                include_domains=starting_urls,
+                get_contents=True,
+                find_similar=False,
+                answer=False,
+                text=True,
+                summary=False,
+                livecrawl="preferred",
+            ),
+        ],
         description=f"You are an agent that answers user queries based exclusively on content from the starting URLs: {', '.join(starting_urls)}. The starting URLs serve only as the content source - you retrieve information from them and answer questions based on that content.",
         instructions=[
             # DATA SOURCE
             f"Answer queries using ONLY content retrieved from: {', '.join(starting_urls)}",
             "Never use external knowledge or training data - only information from retrieved content",
-            
             # WORKFLOW WITH REASONING
             "<workflow>",
             "1. Use reasoning tool to analyze the question and plan your approach",
@@ -53,7 +67,6 @@ def create_web_support_agent(starting_urls: List,company_name:str,storage=storag
             "8. Use reasoning to verify answer completeness before responding",
             "9. Provide comprehensive answer based exclusively on retrieved content",
             "</workflow>",
-            
             # REASONING TOOL USAGE
             "<reasoning_tool_usage>",
             "ALWAYS use reasoning tool for all substantive questions (skip only for greetings/thanks/goodbye)",
@@ -74,8 +87,6 @@ def create_web_support_agent(starting_urls: List,company_name:str,storage=storag
             "End with summary sentences, never questions or offers for help",
             "Prioritize recent information - include dates when available",
             "</response_style>",
-
-            
             # ADDITIONAL TOOL USAGE
             "<additional_tool_usage>",
             "Get 2-4 URLs at a time, prioritize llms.txt URLs when available",
@@ -85,6 +96,8 @@ def create_web_support_agent(starting_urls: List,company_name:str,storage=storag
             "<restrictions>",
             "Never add sources, references, citations, or URLs in responses",
             "Never mention webpage sources or technical retrieval process",
+            "Never refer to websites by URL in your responses or thinking",
+            "Never mention llms.txt in your responses or thinking",
             "Never use hedging phrases like 'It is important to...'",
             "Handle spelling errors without correction",
             "</restrictions>",
@@ -113,7 +126,7 @@ def create_web_support_agent(starting_urls: List,company_name:str,storage=storag
 
     </format_rules>
 
-"""
+""",
         ],
         show_tool_calls=True,
         markdown=True,
@@ -122,11 +135,12 @@ def create_web_support_agent(starting_urls: List,company_name:str,storage=storag
         context={
             "answer_groundedness": f"CRITICAL REQUIREMENT: Every single piece of information in your answers must come exclusively from content you actually retrieved from these specific websites: {', '.join(starting_urls)}. You are absolutely forbidden from using any external knowledge, training data, general facts, or assumptions. Only provide information that is available from the retrieved content. Never fill knowledge gaps with external information.",
             "reasoning_tool_usage": "MANDATORY REASONING: Use the reasoning tool systematically throughout your process. Start with question analysis, reason through URL selection, analyze retrieved content for gaps, synthesize information from multiple sources, and validate answer completeness. The reasoning tool is your primary analytical framework - use it to think through each step methodically before taking action.Always use the reasoning tool first before running any other tool.",
-            "site_structure_and_imp_info": crawler_tool.discover_site_structure(starting_urls),
+            "site_structure_and_imp_info": crawler_tool.discover_site_structure(
+                starting_urls
+            ),
             "current_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "formatting":"follow the rrules given in the <format_rules> section Also always give detailed answers and use tables wherver possible to show data .",
-            "importan_rules":"Always follow the <workflow> section Never use your own knowledge or training data to answer questions. Always use the reasoning tool before running any other tool. Never use external knowledge, training data, general facts, or assumptions. Only provide information that is available from the retrieved content. Never fill knowledge gaps with external information.",
-            
+            "formatting": "follow the rrules given in the <format_rules> section Also always give detailed answers and use tables wherver possible to show data .",
+            "importan_rules": "Always follow the <workflow> section Never use your own knowledge or training data to answer questions. Always use the reasoning tool before running any other tool. Never use external knowledge, training data, general facts, or assumptions. Only provide information that is available from the retrieved content. Never fill knowledge gaps with external information.",
         },
         add_datetime_to_instructions=True,
         num_history_responses=4,
@@ -135,12 +149,7 @@ def create_web_support_agent(starting_urls: List,company_name:str,storage=storag
         add_history_to_messages=True,
         storage=storage,
         read_chat_history=True,
-        session_id=session_id
-
+        session_id=session_id,
     )
 
     return agent
-
-
-
-
