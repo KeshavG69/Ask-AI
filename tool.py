@@ -70,34 +70,30 @@ class WebCrawlerTool(Toolkit):
         except:
             return url
 
-    async def discover_urls_from_sources(self, input_url: str, bypass_cache: bool = False) -> Dict[str, List[str]]:
-        """Discover URLs from llms.txt or fallback to base page crawling."""
+    async def discover_urls_from_sources(self, input_url: str, bypass_cache: bool = False) -> Dict[str, str]:
+        """Discover content from llms.txt or fallback to base page crawling."""
         root_domain = self._get_root_domain(input_url)
-        print(f"🔍 Discovering URLs from: {root_domain}")
+        print(f"🔍 Discovering content from: {root_domain}")
 
         sources = {
-            "llms_txt": [],
+            "llms_txt_content": "",
             "base_page_content": "",
         }
 
         try:
             # Try llms.txt first (AI-optimized content)
-            llms_urls = await self._get_urls_from_llms_txt(f"{root_domain}/llms.txt")
-            if llms_urls:
-                sources["llms_txt"] = llms_urls
-                print(f"✅ Found {len(llms_urls)} URLs in llms.txt")
+            llms_content = await self._get_content_from_llms_txt(f"{root_domain}/llms.txt")
+            if llms_content:
+                sources["llms_txt_content"] = llms_content
+                print(f"✅ Found {len(llms_content)} characters in llms.txt")
 
-            # FALLBACK: If no URLs discovered from llms.txt, crawl base URL
-            total_discovered = len(sources["llms_txt"])
-
-            if total_discovered == 0:
-                print(f"📄 No llms.txt found. Crawling base URL for content... ({'FRESH' if bypass_cache else 'CACHED'})")
+            # FALLBACK: If no content from llms.txt, crawl base URL
+            if not sources["llms_txt_content"]:
+                print(f"📄 No llms.txt content found. Crawling base URL for content... ({'FRESH' if bypass_cache else 'CACHED'})")
                 try:
                     _, content, _ = await self.crawl_single_url(input_url, bypass_cache)
                     if content:
-                        sources["base_page_content"] = (
-                            content  # Return full scraped content
-                        )
+                        sources["base_page_content"] = content
                         print(
                             f"✅ Found {len(content)} characters of content from base page crawl"
                         )
@@ -111,8 +107,8 @@ class WebCrawlerTool(Toolkit):
 
         return sources
 
-    async def _get_urls_from_llms_txt(self, llms_url: str) -> List[str]:
-        """Parse llms.txt for AI-optimized content URLs."""
+    async def _get_content_from_llms_txt(self, llms_url: str) -> str:
+        """Get full content from llms.txt file."""
         try:
             print(f"🔍 Checking llms.txt at: {llms_url}")
             async with aiohttp.ClientSession() as session:
@@ -123,63 +119,19 @@ class WebCrawlerTool(Toolkit):
                         content = await response.text()
                         print(f"📄 llms.txt content length: {len(content)} chars")
                         print(f"📄 llms.txt content preview: {content[:200]}...")
-
-                        urls = []
-                        lines_processed = 0
-
-                        for line in content.strip().split("\n"):
-                            line = line.strip()
-                            lines_processed += 1
-
-                            if line and not line.startswith("#"):
-                                print(f"🔗 Processing line {lines_processed}: '{line}'")
-
-                                # Extract URLs from Markdown links: [text](url)
-                                markdown_pattern = r"\[([^\]]+)\]\(([^)]+)\)"
-                                match = re.search(markdown_pattern, line)
-
-                                if match:
-                                    url_part = match.group(
-                                        2
-                                    )  # Get URL from parentheses
-                                    print(f"🔗 Extracted Markdown URL: '{url_part}'")
-                                else:
-                                    # Fallback to original logic for plain URLs
-                                    url_part = line.split()[0] if line else ""
-                                    print(f"🔗 Extracted plain URL: '{url_part}'")
-
-                                if url_part.startswith(("http", "/")):
-                                    full_url = urljoin(llms_url, url_part)
-                                    print(f"🔗 Full URL constructed: '{full_url}'")
-
-                                    if self.is_allowed_domain(full_url):
-                                        validated = self._ensure_valid_url(full_url)
-                                        if validated:
-                                            urls.append(validated)
-                                            print(f"✅ Added URL: {validated}")
-                                        else:
-                                            print(
-                                                f"❌ URL validation failed for: {full_url}"
-                                            )
-                                    else:
-                                        print(f"❌ Domain not allowed for: {full_url}")
-                                else:
-                                    print(
-                                        f"⚠️ Skipping line (no valid URL): '{url_part}'"
-                                    )
-
-                        print(f"✅ Found {len(urls)} valid URLs from llms.txt")
-                        return urls  # Return all found URLs
+                        
+                        # Return the full content instead of parsing for URLs
+                        print(f"✅ Retrieved full llms.txt content ({len(content)} characters)")
+                        return content.strip()
                     else:
                         print(f"❌ llms.txt not found (status {response.status})")
 
         except Exception as e:
             print(f"❌ llms.txt parsing error: {e}")
             import traceback
-
             print(f"❌ Full traceback: {traceback.format_exc()}")
 
-        return []
+        return ""
 
     def extract_links(self, html_content: str, base_url: str) -> List[str]:
         """Extract all links from HTML content and filter by allowed domains."""
@@ -272,16 +224,16 @@ class WebCrawlerTool(Toolkit):
 
     def discover_site_structure(self, urls: List[str]) -> str:
         """
-        Discover available URLs from llms.txt for agent decision-making.
+        Discover available content from llms.txt and base pages for agent decision-making.
         
-        Uses caching for site structure discovery (since site structure changes infrequently).
+        Uses caching for content discovery (since content changes less frequently).
 
         Args:
-            urls (List[str]): List of URLs to discover from
+            urls (List[str]): List of URLs to discover content from
                             (e.g., ["https://docs.example.com"] or ["https://site1.com", "https://site2.com"])
 
         Returns:
-            str: Formatted list of available URLs organized by source (llms.txt, base page links)
+            str: Formatted content from all sources (llms.txt content, base page content)
         """
         try:
             # Validate URLs
@@ -331,8 +283,8 @@ class WebCrawlerTool(Toolkit):
     async def _discover_multiple_urls(
         self, url_list: List[str], bypass_cache: bool = False
     ) -> Dict[str, List[Tuple[str, str]]]:
-        """Discover URLs from multiple base URLs and combine results with source attribution."""
-        combined_results = {"llms_txt": [], "base_page_content": []}
+        """Discover content from multiple base URLs and combine results with source attribution."""
+        combined_results = {"llms_txt_content": [], "base_page_content": []}
 
         # Run discovery for each URL concurrently
         tasks = [self.discover_urls_from_sources(url, bypass_cache) for url in url_list]
@@ -347,10 +299,11 @@ class WebCrawlerTool(Toolkit):
             base_domain = urlparse(url_list[i]).netloc
 
             # Handle different result types
-            if "llms_txt" in result and result["llms_txt"]:
-                # Add URLs with source attribution (base_domain, url)
-                for url in result["llms_txt"]:
-                    combined_results["llms_txt"].append((base_domain, url))
+            if "llms_txt_content" in result and result["llms_txt_content"]:
+                # Add content with source attribution (base_domain, content)
+                combined_results["llms_txt_content"].append(
+                    (base_domain, result["llms_txt_content"])
+                )
 
             if "base_page_content" in result and result["base_page_content"]:
                 # Add content with source attribution (base_domain, content)
@@ -365,7 +318,7 @@ class WebCrawlerTool(Toolkit):
     ) -> str:
         """Format multi-URL discovery results with source attribution."""
         output = []
-        output.append("=== SITE STRUCTURE DISCOVERY ===")
+        output.append("=== CONTENT DISCOVERY ===")
 
         # Show which base URLs were discovered from
         domains = [urlparse(url).netloc for url in url_list]
@@ -374,39 +327,40 @@ class WebCrawlerTool(Toolkit):
         )
         output.append("")
 
-        total_urls = 0
+        total_content_sources = 0
 
-        # Format llms.txt URLs (highest priority) with source attribution
-        llms_urls = discovered.get("llms_txt", [])
-        if llms_urls:
-            total_urls += len(llms_urls)
+        # Format llms.txt content (highest priority) with source attribution
+        llms_content = discovered.get("llms_txt_content", [])
+        if llms_content:
+            total_content_sources += len(llms_content)
             output.append(
-                f"📋 From llms.txt ({len(llms_urls)} AI-optimized URLs found):"
+                f"📋 From llms.txt ({len(llms_content)} AI-optimized content sources found):"
             )
-            for i, (base_domain, url) in enumerate(llms_urls, 1):
-                output.append(f"  [{base_domain}] {i}. {url}")
-            output.append("")
+            for i, (base_domain, content) in enumerate(llms_content, 1):
+                output.append(f"  [{base_domain}] llms.txt content ({len(content)} chars):")
+                output.append(f"{content}")
+                output.append("")
 
         # Format base page content (fallback) with source attribution
         base_content = discovered.get("base_page_content", [])
         if base_content:
+            total_content_sources += len(base_content)
             output.append(f"📄 From base page crawls ({len(base_content)} pages found):")
             for i, (base_domain, content) in enumerate(base_content, 1):
                 output.append(f"  [{base_domain}] Page {i} ({len(content)} chars):")
                 output.append(f"{content}")
                 output.append("")
-            output.append("")
 
         # Summary
         output.append("=== DISCOVERY SUMMARY ===")
-        output.append(f"Total URLs discovered: {total_urls}")
+        output.append(f"Total content sources discovered: {total_content_sources}")
         output.append(
-            "💡 Use 'crawl_selected_urls' tool to crawl specific URLs that are relevant to the user's question."
+            "💡 All discovered content is now available for answering questions - no additional crawling needed."
         )
 
-        if total_urls == 0:
+        if total_content_sources == 0:
             output.append(
-                "\n⚠️ No URLs discovered from any source (llms.txt or base page links)."
+                "\n⚠️ No content discovered from any source (llms.txt or base page crawls)."
             )
             output.append(
                 "You can still crawl the base URLs directly using 'crawl_selected_urls'."
@@ -510,27 +464,28 @@ class WebCrawlerTool(Toolkit):
     async def _smart_crawl_multiple_urls(
         self, initial_urls: List[str]
     ) -> List[Tuple[str, str, List[str]]]:
-        """Smart crawling with URL discovery from llms.txt."""
+        """Smart crawling - now primarily returns content directly from llms.txt."""
         urls_to_crawl = set(initial_urls)
 
-        # For each initial URL, discover additional URLs
+        # For each initial URL, discover content (not just URLs)
         for url in initial_urls:
             try:
                 discovered = await self.discover_urls_from_sources(url)
 
-                # Add discovered URLs from llms.txt
-                urls_to_crawl.update(discovered.get("llms_txt", [])[:5])
+                # Note: Now returns content directly, not URLs to crawl
+                # The content is already available in the discovery results
+                print(f"📋 Discovered content from {url}: {len(discovered.get('llms_txt_content', ''))} chars from llms.txt, {len(discovered.get('base_page_content', ''))} chars from base page")
 
             except Exception as e:
-                print(f"⚠️ URL discovery failed for {url}: {e}")
+                print(f"⚠️ Content discovery failed for {url}: {e}")
 
-        # Convert to list and limit total URLs
+        # Convert to list and limit total URLs for fallback crawling
         final_urls = list(urls_to_crawl)[:12]  # Limit to 12 total URLs
         print(
-            f"📋 Selected {len(final_urls)} URLs for crawling (including discovered URLs)"
+            f"📋 Fallback crawling {len(final_urls)} URLs (content may already be available from discovery)"
         )
 
-        # Crawl all selected URLs
+        # Crawl all selected URLs as fallback
         return await self._crawl_multiple_urls(final_urls)
 
     async def _crawl_multiple_urls(
