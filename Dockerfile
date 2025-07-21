@@ -1,5 +1,5 @@
 # Use lightweight Python image
-FROM python:3.13-slim
+FROM python:3.13
 
 # Install only essential packages
 RUN apt-get update && apt-get install -y \
