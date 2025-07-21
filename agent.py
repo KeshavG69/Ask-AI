@@ -33,11 +33,11 @@ def create_web_support_agent(
     crawler_tool = WebCrawlerTool(starting_urls=starting_urls)
 
     # Use provided API key or fallback to environment variable
-    openai_api_key = api_key 
+    
 
     # Create agent with intelligent instructions
     agent = Agent(
-        model=OpenAIChat(id="gpt-4.1-mini", api_key=openai_api_key),
+        model=OpenAIChat(id="gpt-4.1-mini", api_key=api_key),
         tools=[
             crawler_tool,
             ReasoningTools(),
