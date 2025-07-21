@@ -22,6 +22,7 @@ class ChatRequest(BaseModel):
     query: str
     session_id: str
     company_name: str
+    api_key: str
 
 
 async def stream_chat_response(
@@ -87,6 +88,10 @@ async def chat_agent(request: ChatRequest):
             )
         if not request.urls or len(request.urls) == 0:
             raise HTTPException(status_code=400, detail="At least one URL is required")
+        if not request.api_key or not request.api_key.strip():
+            raise HTTPException(status_code=400, detail="API key is required")
+        if not request.api_key.startswith('sk-'):
+            raise HTTPException(status_code=400, detail="Invalid API key format. OpenAI API keys start with 'sk-'")
 
         logger.info(f"🔍 Processing chat request for session: {request.session_id}")
         logger.info(f"📝 Query: {request.query[:100]}...")
@@ -99,9 +104,12 @@ async def chat_agent(request: ChatRequest):
             f"🆕 Creating new web support agent for session: {request.session_id}"
         )
 
-        # Create new agent with provided URLs
+        # Create new agent with provided URLs and API key
         agent = create_web_support_agent(
-            starting_urls=request.urls, company_name=request.company_name,session_id=request.session_id
+            starting_urls=request.urls, 
+            company_name=request.company_name,
+            api_key=request.api_key,
+            session_id=request.session_id
         )
 
         logger.info(f"✅ Agent created successfully for {len(request.urls)} URLs")
