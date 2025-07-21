@@ -1,27 +1,30 @@
-# Use lightweight Python image
-FROM python:3.13
+FROM python:3.13-slim
 
-# Install only essential packages
+# Install minimal system dependencies
 RUN apt-get update && apt-get install -y \
     curl \
-    chromium \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv
-RUN pip install uv
+# Install pip & uv
+RUN pip install --upgrade pip && pip install uv
 
-WORKDIR /app
+# Install torch with CPU wheels only (saves GBs)
+RUN pip install torch==2.7.1 --extra-index-url https://download.pytorch.org/whl/cpu
 
-# Copy and install Python dependencies
+# Install other Python deps separately to leverage Docker caching
 COPY pyproject.toml ./
 RUN uv sync
 
-# Install Playwright Chromium
-RUN uv run playwright install chromium
+# Install Playwright Chromium (this adds ~300MB)
+RUN pip install playwright && playwright install chromium
 
-# Copy app code
+# Create app directory & copy code
+WORKDIR /app
 COPY . .
 
-EXPOSE 8000
+# Expose dynamic port (Render/Heroku style)
 CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
-

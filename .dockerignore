@@ -1,0 +1,35 @@
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+
+# Virtual environments
+.env
+.venv/
+venv/
+env/
+
+# PyCharm & VSCode
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git & Logs
+.git/
+.gitignore
+*.log
+
+# Cache & Build
+dist/
+build/
+*.egg-info/
+node_modules/
+
+# Playwright cache (optional)
+playwright/.cache/
