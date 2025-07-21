@@ -1,5 +1,5 @@
-# Use Ubuntu 22.04 as base image for better library support
-FROM ubuntu:22.04
+# Use Python 3.13 official image (Debian-based)
+FROM python:3.13-slim
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
@@ -8,24 +8,11 @@ ENV PYTHONDONTWRITEBYTECODE=1
 
 # Install system dependencies for Playwright and missing libraries
 RUN apt-get update && apt-get install -y \
-    # Python and basic tools
-    python3.11 \
-    python3.11-pip \
-    python3.11-venv \
-    python3.11-dev \
+    # Basic tools
     curl \
     git \
-    # Missing libraries for Playwright browsers
-    libgtk-4-1 \
-    libgraphene-1.0-0 \
-    libgstgl-1.0-0 \
-    libgstcodecparsers-1.0-0 \
-    libavif15 \
-    libenchant-2-2 \
-    libsecret-1-0 \
-    libmanette-0.2-0 \
-    libgles2-mesa \
-    # Additional browser dependencies
+    wget \
+    # Core browser dependencies
     libnss3 \
     libatk-bridge2.0-0 \
     libdrm2 \
@@ -40,20 +27,20 @@ RUN apt-get update && apt-get install -y \
     libgtk-3-0 \
     # Fonts
     fonts-liberation \
-    fonts-noto \
+    fonts-noto-cjk \
     fonts-noto-color-emoji \
-    # Additional multimedia libraries
-    libgstreamer1.0-0 \
-    libgstreamer-plugins-base1.0-0 \
-    libgstreamer-plugins-bad1.0-0 \
     # X11 and display
     xvfb \
-    x11vnc \
+    # Additional libraries that might be missing
+    libglib2.0-0 \
+    libdbus-1-3 \
+    libxcb1 \
+    libx11-6 \
+    libxext6 \
+    libxrender1 \
+    libxtst6 \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-
-# Create Python 3.13 symlink (Ubuntu 22.04 has 3.11 by default)
-RUN ln -sf /usr/bin/python3.11 /usr/bin/python3 && \
-    ln -sf /usr/bin/python3.11 /usr/bin/python
 
 # Install uv - Fast Python package manager
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
