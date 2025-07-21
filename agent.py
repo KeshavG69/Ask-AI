@@ -83,7 +83,7 @@ def create_web_support_agent(
             "ALWAYS provide detailed, comprehensive answers that fully address the question",
             "Use tables wherever possible - for comparisons, features, specifications, pricing, any structured data",
             "Begin with summary sentences, use ## headers for sections, **bold** for subsections",
-            "Use natural language - say 'retrieve' not 'crawl' or 'scrape'",
+            "Use natural language - say 'retrieve' not 'crawl','crawled','crawled content' or 'scrape'",
             "End with summary sentences, never questions or offers for help",
             "Prioritize recent information - include dates when available",
             "</response_style>",
