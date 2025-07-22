@@ -177,7 +177,6 @@ class WebCrawlerTool(Toolkit):
                 wait_until="load",                    # Faster loading strategy
                 delay_before_return_html=0.3,         # Reduced from 2s to 0.3s  
                 word_count_threshold=5,               # Lower threshold
-                page_timeout=10000,                   # 10s timeout to prevent hanging
                 process_iframes=False,                # Skip iframes for speed
             )
 
