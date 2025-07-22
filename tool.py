@@ -4,8 +4,9 @@ import xml.etree.ElementTree as ET
 from typing import List, Tuple, Dict
 from urllib.parse import urljoin, urlparse
 from agno.tools import Toolkit
-from crawl4ai import AsyncWebCrawler, CrawlerRunConfig
+from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, BrowserConfig, CacheMode
 import aiohttp
+import time
 
 
 class WebCrawlerTool(Toolkit):
@@ -163,25 +164,61 @@ class WebCrawlerTool(Toolkit):
         unique_links = list(dict.fromkeys(links))[: self.max_links_per_page]
         return unique_links
 
-    async def crawl_single_url(self, url: str, bypass_cache: bool = False) -> Tuple[str, str, List[str]]:
-        """Crawl a single URL and return content, raw HTML, and links."""
-        try:
-            # Import CacheMode here to avoid circular imports
-            from crawl4ai import CacheMode
-            
-            # Configure crawling with cache mode
-            cache_mode = CacheMode.BYPASS if bypass_cache else CacheMode.ENABLED
-            
-            config = CrawlerRunConfig(
-                cache_mode=cache_mode,
-                wait_until="load",                    # Faster loading strategy
-                delay_before_return_html=0.3,         # Reduced from 2s to 0.3s  
-                word_count_threshold=5,               # Lower threshold
-                process_iframes=False,                # Skip iframes for speed
-            )
+    def _get_optimized_browser_config(self) -> BrowserConfig:
+        """Get optimized browser configuration for maximum performance."""
+        return BrowserConfig(
+            headless=True,                    # Always headless for production
+            text_mode=True,                   # Disable images/heavy content  
+            light_mode=True,                  # Disable background features
+            java_script_enabled=True,         # Keep JS enabled but optimize
+            extra_args=[
+                "--disable-extensions",       # Disable browser extensions
+                "--disable-plugins",          # Disable plugins
+                "--disable-images",           # Skip image loading
+                "--no-sandbox",               # Better performance in containers
+                "--disable-dev-shm-usage",    # Better memory management
+                "--disable-background-networking",  # Reduce background activity
+                "--disable-background-timer-throttling",  # Better performance
+                "--disable-renderer-backgrounding",  # Prevent throttling
+                "--disable-backgrounding-occluded-windows",  # Performance
+                "--disable-features=TranslateUI",  # Skip translation
+                "--disable-ipc-flooding-protection",  # Performance
+                "--disable-web-security",     # Speed up requests
+                "--aggressive-cache-discard"  # Better memory management
+            ]
+        )
 
-            async with AsyncWebCrawler() as crawler:
-                result = await crawler.arun(url=url, config=config)
+    def _get_optimized_crawler_config(self, bypass_cache: bool = False) -> CrawlerRunConfig:
+        """Get optimized crawler configuration for maximum performance."""
+        cache_mode = CacheMode.BYPASS if bypass_cache else CacheMode.ENABLED
+        
+        return CrawlerRunConfig(
+            cache_mode=cache_mode,
+            wait_until="commit",              # Fastest wait strategy (vs "load")
+            delay_before_return_html=0,       # Zero delay for maximum speed
+            
+            word_count_threshold=1,           # Lower threshold for faster processing
+            process_iframes=False,            # Skip iframe processing
+            remove_overlay_elements=True,     # Remove popups/modals quickly
+            # excluded_tags=["script", "style", "nav", "header", "footer", "aside"],  # Skip non-content
+            only_text=False,                  # Keep some structure for links
+            ignore_body_visibility=True,      # Skip visibility checks
+            # excluded_selector="#ads, .advertisement, .social-media, .sidebar",  # Skip common clutter
+            simulate_user=False,              # Skip user simulation for speed
+            override_navigator=False,         # Skip navigator override
+        )
+
+    async def crawl_single_url(self, url: str, bypass_cache: bool = False) -> Tuple[str, str, List[str]]:
+        """Crawl a single URL with optimized performance configuration."""
+        start_time = time.time()
+        
+        try:
+            # Use optimized configurations
+            browser_config = self._get_optimized_browser_config()
+            crawler_config = self._get_optimized_crawler_config(bypass_cache)
+
+            async with AsyncWebCrawler(config=browser_config) as crawler:
+                result = await crawler.arun(url=url, config=crawler_config)
 
                 if not result or not result.success:
                     return (
@@ -197,11 +234,14 @@ class WebCrawlerTool(Toolkit):
                 raw_html = result.html or ""
                 links = self.extract_links(raw_html, url)
 
-                print(f"📄 Crawled {url} ({'FRESH' if bypass_cache else 'CACHED'}) - {len(content)} chars")
+                crawl_time = time.time() - start_time
+                print(f"⚡ Crawled {url} in {crawl_time:.2f}s ({'FRESH' if bypass_cache else 'CACHED'}) - {len(content)} chars")
                 
                 return url, content, links
 
         except Exception as e:
+            crawl_time = time.time() - start_time
+            print(f"❌ Failed to crawl {url} in {crawl_time:.2f}s: {str(e)}")
             return url, f"Error crawling {url}: {str(e)}", []
 
     def _extract_best_content(self, result) -> str:
@@ -223,23 +263,36 @@ class WebCrawlerTool(Toolkit):
 
         return "No content extracted"
 
-    def discover_site_structure(self, urls: List[str]) -> str:
+    def discover_site_structure(self, urls) -> str:
         """
         Discover available content from llms.txt and base pages for agent decision-making.
         
         Uses caching for content discovery (since content changes less frequently).
 
         Args:
-            urls (List[str]): List of URLs to discover content from
-                            (e.g., ["https://docs.example.com"] or ["https://site1.com", "https://site2.com"])
+            urls: URL(s) to discover content from - can be a single string or list of strings
+                 (e.g., "https://docs.example.com" or ["https://site1.com", "https://site2.com"])
 
         Returns:
             str: Formatted content from all sources (llms.txt content, base page content)
         """
         try:
+            # Fix input type handling - ensure urls is always a list
+            if isinstance(urls, str):
+                urls = [urls]  # Convert single string to list
+            elif not isinstance(urls, (list, tuple)):
+                # Handle other iterables, but prevent string iteration
+                try:
+                    urls = list(urls)
+                except TypeError:
+                    urls = [str(urls)]  # Fallback for non-iterable types
+            
+            print(f"🔧 Processing {len(urls)} URL(s) for site structure discovery")
+            
             # Validate URLs
             url_list = []
             for url in urls:
+                print(f"🔗 Validating URL: {url}")
                 url = url.strip()
                 if url:
                     validated_url = self._ensure_valid_url(url)
@@ -411,19 +464,32 @@ class WebCrawlerTool(Toolkit):
 
         return "\n".join(output)
 
-    def crawl_selected_urls(self, urls: List[str]) -> str:
+    def crawl_selected_urls(self, urls) -> str:
         """
         Crawl specific URLs selected by the agent after site structure discovery.
         
         Always gets fresh content (bypasses cache) to ensure up-to-date information.
 
         Args:
-            urls (List[str]): List of URLs to crawl (e.g., ["https://site.com/docs", "https://site.com/faq"])
+            urls: URL(s) to crawl - can be a single string or list of strings
+                 (e.g., "https://site.com/docs" or ["https://site.com/docs", "https://site.com/faq"])
 
         Returns:
             str: Formatted content from crawled pages
         """
         try:
+            # Fix input type handling - ensure urls is always a list
+            if isinstance(urls, str):
+                urls = [urls]  # Convert single string to list
+            elif not isinstance(urls, (list, tuple)):
+                # Handle other iterables, but prevent string iteration
+                try:
+                    urls = list(urls)
+                except TypeError:
+                    urls = [str(urls)]  # Fallback for non-iterable types
+            
+            print(f"🔧 Processing {len(urls)} URL(s) for crawling")
+            
             # Parse and validate URLs
             url_list = []
             for url in urls:
@@ -492,18 +558,48 @@ class WebCrawlerTool(Toolkit):
     async def _crawl_multiple_urls(
         self, urls: List[str], bypass_cache: bool = False
     ) -> List[Tuple[str, str, List[str]]]:
-        """Crawl multiple URLs concurrently using Crawl4AI's built-in caching."""
-        tasks = [self.crawl_single_url(url, bypass_cache) for url in urls]
+        """Crawl multiple URLs with optimized concurrency management for maximum performance."""
+        if not urls:
+            return []
+
+        start_time = time.time()
+        
+        # Smart concurrency based on URL count and system capabilities
+        max_concurrent = min(len(urls), 5)  # Optimal concurrency for most systems
+        semaphore = asyncio.Semaphore(max_concurrent)
+        
+        print(f"🚀 Starting optimized crawl of {len(urls)} URLs with {max_concurrent} concurrent workers")
+
+        async def crawl_with_concurrency_limit(url: str) -> Tuple[str, str, List[str]]:
+            """Crawl a single URL with concurrency limiting."""
+            async with semaphore:
+                return await self.crawl_single_url(url, bypass_cache)
+
+        # Create tasks for all URLs
+        tasks = [crawl_with_concurrency_limit(url) for url in urls]
+        
+        # Use asyncio.gather for maximum parallel execution
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Handle any exceptions in results
+        # Process results and handle exceptions
         processed_results = []
+        successful_crawls = 0
+        failed_crawls = 0
+        
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 processed_results.append((urls[i], f"Exception: {str(result)}", []))
+                failed_crawls += 1
+                print(f"❌ Failed to crawl {urls[i]}: {str(result)}")
             else:
                 processed_results.append(result)
+                successful_crawls += 1
 
+        total_time = time.time() - start_time
+        avg_time_per_url = total_time / len(urls) if urls else 0
+        
+        print(f"⚡ Completed crawl batch: {successful_crawls} successful, {failed_crawls} failed in {total_time:.2f}s (avg {avg_time_per_url:.2f}s per URL)")
+        
         return processed_results
 
     def _format_results(self, results: List[Tuple[str, str, List[str]]]) -> str:
