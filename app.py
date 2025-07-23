@@ -22,7 +22,7 @@ class ChatRequest(BaseModel):
     query: str
     session_id: str
     company_name: str
-    api_key: Optional[str]
+    api_key: str
 
 
 async def stream_chat_response(
