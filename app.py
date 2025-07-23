@@ -2,7 +2,7 @@ import logging
 import json
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from typing import List, AsyncGenerator, cast
+from typing import List, AsyncGenerator, Optional, cast
 from uuid import UUID
 from pydantic import BaseModel
 from agno.agent import Agent
@@ -22,7 +22,7 @@ class ChatRequest(BaseModel):
     query: str
     session_id: str
     company_name: str
-    api_key: str
+    api_key: Optional[str]
 
 
 async def stream_chat_response(
