@@ -161,7 +161,7 @@ class WebCrawlerTool(Toolkit):
                 continue
 
         # Remove duplicates and limit
-        unique_links = list(dict.fromkeys(links))[: self.max_links_per_page]
+        unique_links = list(dict.fromkeys(links))
         return unique_links
 
     def _get_optimized_browser_config(self) -> BrowserConfig:
