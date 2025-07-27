@@ -72,25 +72,54 @@ class WebCrawlerTool(Toolkit):
             return url
 
     async def discover_urls_from_sources(self, input_url: str, bypass_cache: bool = False) -> Dict[str, str]:
-        """Discover content from llms.txt or fallback to base page crawling."""
+        """
+        Five-step discovery with enhanced sitemap support:
+        1. llms.txt content
+        2. sitemap.xml URLs (with recursive fetching)
+        3. sitemap/sitemap.xml URLs (with recursive fetching)
+        4. sitemap_index.xml URLs (with recursive fetching) 
+        5. base page content (fallback)
+        """
         root_domain = self._get_root_domain(input_url)
         print(f"🔍 Discovering content from: {root_domain}")
 
         sources = {
             "llms_txt_content": "",
+            "sitemap_urls": [],
             "base_page_content": "",
         }
 
         try:
-            # Try llms.txt first (AI-optimized content)
+            # Step 1: Always try llms.txt first
             llms_content = await self._get_content_from_llms_txt(f"{root_domain}/llms.txt")
             if llms_content:
                 sources["llms_txt_content"] = llms_content
-                print(f"✅ Found {len(llms_content)} characters in llms.txt")
+                print(f"✅ Found llms.txt content ({len(llms_content)} chars)")
 
-            # FALLBACK: If no content from llms.txt, crawl base URL
-            if not sources["llms_txt_content"]:
-                print(f"📄 No llms.txt content found. Crawling base URL for content... ({'FRESH' if bypass_cache else 'CACHED'})")
+            # Step 2: Try sitemap.xml (with recursive fetching)
+            print(f"🔍 Checking sitemap.xml with recursive fetching...")
+            sitemap_urls = await self._get_urls_from_sitemap(f"{root_domain}/sitemap.xml")
+
+
+            # Step 3: If both fail, try sitemap_index.xml (with recursive fetching)
+            if not sitemap_urls:
+                print(f"🔍 sitemap/sitemap.xml failed, trying sitemap_index.xml with recursive fetching...")
+                sitemap_urls = await self._get_urls_from_sitemap(f"{root_domain}/sitemap_index.xml")
+            
+            # Step 4: If sitemap.xml fails, try sitemap/sitemap.xml (with recursive fetching)
+            if not sitemap_urls:
+                print(f"🔍 sitemap.xml failed, trying sitemap/sitemap.xml with recursive fetching...")
+                sitemap_urls = await self._get_urls_from_sitemap(f"{root_domain}/sitemap/sitemap.xml")
+            
+            
+            
+            if sitemap_urls:
+                sources["sitemap_urls"] = sitemap_urls
+                print(f"✅ Found {len(sitemap_urls)} URLs from sitemap discovery (including recursive)")
+
+            # Step 5: Fallback to base page content (only if no sitemap URLs found)
+            if not sources["sitemap_urls"]:
+                print(f"📄 No sitemap URLs found, falling back to base page content... ({'FRESH' if bypass_cache else 'CACHED'})")
                 try:
                     _, content, _ = await self.crawl_single_url(input_url, bypass_cache)
                     if content:
@@ -133,6 +162,172 @@ class WebCrawlerTool(Toolkit):
             print(f"❌ Full traceback: {traceback.format_exc()}")
 
         return ""
+
+    async def _fetch_sitemap_content(self, sitemap_url: str) -> str:
+        """
+        Fetch sitemap content with proper error handling.
+        Returns empty string on failure (not exception).
+        """
+        try:
+            print(f"🔍 Fetching sitemap: {sitemap_url}")
+            async with aiohttp.ClientSession() as session:
+                async with session.get(sitemap_url, timeout=10) as response:
+                    if response.status == 200:
+                        content = await response.text()
+                        print(f"✅ Sitemap fetched successfully ({len(content)} chars)")
+                        return content
+                    else:
+                        print(f"❌ Sitemap {sitemap_url} returned {response.status}")
+                        return ""
+        except Exception as e:
+            print(f"❌ Failed to fetch sitemap {sitemap_url}: {e}")
+            return ""
+
+    def _parse_sitemap_xml(self, xml_content: str, base_url: str) -> Dict[str, List[str]]:
+        """
+        Parse XML and determine if it's:
+        - Regular sitemap (has <url> elements)
+        - Sitemap index (has <sitemap> elements)
+        """
+        try:
+            root = ET.fromstring(xml_content)
+            
+            # Remove namespace for easier parsing
+            for elem in root.iter():
+                if '}' in elem.tag:
+                    elem.tag = elem.tag.split('}')[1]
+            
+            page_urls = []
+            sitemap_urls = []
+            
+            # Check for regular sitemap structure
+            for url_elem in root.findall('.//url'):
+                loc_elem = url_elem.find('loc')
+                if loc_elem is not None and loc_elem.text:
+                    full_url = urljoin(base_url, loc_elem.text.strip())
+                    if self.is_allowed_domain(full_url):
+                        page_urls.append(full_url)
+            
+            # Check for sitemap index structure
+            for sitemap_elem in root.findall('.//sitemap'):
+                loc_elem = sitemap_elem.find('loc')
+                if loc_elem is not None and loc_elem.text:
+                    full_url = urljoin(base_url, loc_elem.text.strip())
+                    if self.is_allowed_domain(full_url):
+                        sitemap_urls.append(full_url)
+            
+            print(f"📋 Parsed XML: {len(page_urls)} page URLs, {len(sitemap_urls)} nested sitemaps")
+            return {
+                'page_urls': page_urls,
+                'sitemap_urls': sitemap_urls
+            }
+            
+        except ET.ParseError as e:
+            print(f"❌ XML parsing error: {e}")
+            return {'page_urls': [], 'sitemap_urls': []}
+
+    async def _fetch_recursive_sitemaps(self, sitemap_urls: List[str], depth: int = 0, max_depth: int = 3) -> List[str]:
+        """
+        Recursively fetch all nested sitemaps and extract URLs.
+        
+        Args:
+            sitemap_urls: List of sitemap URLs to fetch
+            depth: Current recursion depth
+            max_depth: Maximum recursion depth to prevent infinite loops
+        
+        Returns:
+            List of all page URLs found in all nested sitemaps
+        """
+        if depth >= max_depth:
+            print(f"⚠️ Maximum recursion depth ({max_depth}) reached, stopping sitemap fetching")
+            return []
+        
+        all_urls = []
+        
+        # Fetch all sitemaps concurrently (with limit)
+        semaphore = asyncio.Semaphore(3)  # Limit concurrent requests
+        
+        async def fetch_single_sitemap(sitemap_url: str) -> List[str]:
+            async with semaphore:
+                try:
+                    # Fetch sitemap content
+                    sitemap_content = await self._fetch_sitemap_content(sitemap_url)
+                    if not sitemap_content:
+                        return []
+                    
+                    # Parse the nested sitemap
+                    parsed_data = self._parse_sitemap_xml(sitemap_content, sitemap_url)
+                    
+                    urls_from_this_sitemap = []
+                    
+                    # Add page URLs from this sitemap
+                    urls_from_this_sitemap.extend(parsed_data['page_urls'])
+                    
+                    # If this sitemap also has nested sitemaps, fetch them recursively
+                    if parsed_data['sitemap_urls']:
+                        print(f"🔄 Sitemap {sitemap_url} has {len(parsed_data['sitemap_urls'])} more nested sitemaps")
+                        deeper_urls = await self._fetch_recursive_sitemaps(
+                            parsed_data['sitemap_urls'], 
+                            depth + 1, 
+                            max_depth
+                        )
+                        urls_from_this_sitemap.extend(deeper_urls)
+                    
+                    return urls_from_this_sitemap
+                    
+                except Exception as e:
+                    print(f"❌ Failed to fetch nested sitemap {sitemap_url}: {e}")
+                    return []
+        
+        # Fetch all sitemaps concurrently
+        tasks = [fetch_single_sitemap(url) for url in sitemap_urls]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Combine results
+        for result in results:
+            if isinstance(result, list):
+                all_urls.extend(result)
+            else:
+                print(f"⚠️ Sitemap fetch returned exception: {result}")
+        
+        # Remove duplicates while preserving order
+        unique_urls = list(dict.fromkeys(all_urls))
+        
+        print(f"📊 Recursive sitemap fetching (depth {depth}) found {len(unique_urls)} unique URLs")
+        return unique_urls
+
+    async def _get_urls_from_sitemap(self, sitemap_url: str) -> List[str]:
+        """
+        Process any sitemap with automatic recursive fetching.
+        """
+        try:
+            # Fetch the initial sitemap
+            sitemap_content = await self._fetch_sitemap_content(sitemap_url)
+            if not sitemap_content:
+                return []
+            
+            # Parse XML to get both page URLs and nested sitemap URLs
+            parsed_data = self._parse_sitemap_xml(sitemap_content, sitemap_url)
+            
+            all_urls = []
+            
+            # Add direct page URLs (if any)
+            all_urls.extend(parsed_data['page_urls'])
+            
+            # If there are nested sitemaps, fetch them recursively
+            if parsed_data['sitemap_urls']:
+                print(f"🔄 Found {len(parsed_data['sitemap_urls'])} nested sitemaps in {sitemap_url}")
+                nested_urls = await self._fetch_recursive_sitemaps(parsed_data['sitemap_urls'])
+                all_urls.extend(nested_urls)
+            
+            # Remove duplicates
+            unique_urls = list(dict.fromkeys(all_urls))
+            
+            return unique_urls
+            
+        except Exception as e:
+            print(f"❌ Failed to process sitemap {sitemap_url}: {e}")
+            return []
 
     def extract_links(self, html_content: str, base_url: str) -> List[str]:
         """Extract all links from HTML content and filter by allowed domains."""
@@ -338,7 +533,7 @@ class WebCrawlerTool(Toolkit):
         self, url_list: List[str], bypass_cache: bool = False
     ) -> Dict[str, List[Tuple[str, str]]]:
         """Discover content from multiple base URLs and combine results with source attribution."""
-        combined_results = {"llms_txt_content": [], "base_page_content": []}
+        combined_results = {"llms_txt_content": [], "sitemap_urls": [], "base_page_content": []}
 
         # Run discovery for each URL concurrently
         tasks = [self.discover_urls_from_sources(url, bypass_cache) for url in url_list]
@@ -357,6 +552,12 @@ class WebCrawlerTool(Toolkit):
                 # Add content with source attribution (base_domain, content)
                 combined_results["llms_txt_content"].append(
                     (base_domain, result["llms_txt_content"])
+                )
+
+            if "sitemap_urls" in result and result["sitemap_urls"]:
+                # Add sitemap URLs with source attribution (base_domain, urls_list)
+                combined_results["sitemap_urls"].append(
+                    (base_domain, result["sitemap_urls"])
                 )
 
             if "base_page_content" in result and result["base_page_content"]:
@@ -395,6 +596,18 @@ class WebCrawlerTool(Toolkit):
                 output.append(f"{content}")
                 output.append("")
 
+        # Format sitemap URLs (second priority) with source attribution
+        sitemap_data = discovered.get("sitemap_urls", [])
+        if sitemap_data:
+            total_sitemap_urls = sum(len(urls) for _, urls in sitemap_data)
+            output.append(f"🗺️ From sitemap discovery ({len(sitemap_data)} domains, {total_sitemap_urls} URLs found):")
+            for i, (base_domain, urls) in enumerate(sitemap_data, 1):
+                output.append(f"  [{base_domain}] {len(urls)} URLs discovered:")
+                # Show all URLs for agent selection
+                for j, url in enumerate(urls, 1):
+                    output.append(f"    {j}. {url}")
+                output.append("")
+
         # Format base page content (fallback) with source attribution
         base_content = discovered.get("base_page_content", [])
         if base_content:
@@ -407,14 +620,20 @@ class WebCrawlerTool(Toolkit):
 
         # Summary
         output.append("=== DISCOVERY SUMMARY ===")
+        total_sitemap_urls = sum(len(urls) for _, urls in discovered.get("sitemap_urls", []))
         output.append(f"Total content sources discovered: {total_content_sources}")
-        output.append(
-            "💡 All discovered content is now available for answering questions - no additional crawling needed."
-        )
+        output.append(f"Total sitemap URLs discovered: {total_sitemap_urls}")
+        
+        if llms_content:
+            output.append("💡 llms.txt content is immediately available for answering questions.")
+        if total_sitemap_urls > 0:
+            output.append("💡 Use 'crawl_selected_urls' to crawl specific URLs from the sitemap that are relevant to your question.")
+        if base_content:
+            output.append("💡 Base page content is immediately available for answering questions.")
 
-        if total_content_sources == 0:
+        if total_content_sources == 0 and total_sitemap_urls == 0:
             output.append(
-                "\n⚠️ No content discovered from any source (llms.txt or base page crawls)."
+                "\n⚠️ No content or URLs discovered from any source (llms.txt, sitemap, or base page crawls)."
             )
             output.append(
                 "You can still crawl the base URLs directly using 'crawl_selected_urls'."
@@ -436,7 +655,7 @@ class WebCrawlerTool(Toolkit):
             output.append(
                 f"📋 From llms.txt ({len(llms_urls)} AI-optimized URLs found):"
             )
-            for i, url in enumerate(llms_urls[:15], 1):
+            for i, url in enumerate(llms_urls, 1):
                 output.append(f"  {i}. {url}")
             output.append("")
 
@@ -546,8 +765,8 @@ class WebCrawlerTool(Toolkit):
             except Exception as e:
                 print(f"⚠️ Content discovery failed for {url}: {e}")
 
-        # Convert to list and limit total URLs for fallback crawling
-        final_urls = list(urls_to_crawl)[:12]  # Limit to 12 total URLs
+        # Convert to list for fallback crawling
+        final_urls = list(urls_to_crawl)
         print(
             f"📋 Fallback crawling {len(final_urls)} URLs (content may already be available from discovery)"
         )
@@ -637,7 +856,7 @@ class WebCrawlerTool(Toolkit):
             if links:
                 total_links += len(links)
                 output.append(f"From {url} ({len(links)} links found):")
-                for link in links[:15]:  # Show top 15 most relevant links
+                for link in links:  # Show all discovered links
                     output.append(f"- {link}")
                 output.append("")
 
