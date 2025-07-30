@@ -650,11 +650,30 @@ class WebCrawlerTool(Toolkit):
             output.append(
                 f"🗺️ From sitemap discovery ({len(sitemap_data)} domains, {total_sitemap_urls} URLs found):"
             )
+            
+            # Limit to top 200 URLs total across all domains
+            url_count = 0
+            max_urls = 200
+            
             for i, (base_domain, urls) in enumerate(sitemap_data, 1):
-                output.append(f"  [{base_domain}] {len(urls)} URLs discovered:")
-                # Show all URLs for agent selection
-                for j, url in enumerate(urls, 1):
+                remaining_slots = max_urls - url_count
+                if remaining_slots <= 0:
+                    output.append(f"  ... and {len(sitemap_data) - i + 1} more domains with URLs truncated due to 200 URL limit")
+                    break
+                
+                urls_to_show = urls[:remaining_slots]
+                if len(urls) > len(urls_to_show):
+                    output.append(f"  [{base_domain}] {len(urls_to_show)} URLs shown (of {len(urls)} total):")
+                else:
+                    output.append(f"  [{base_domain}] {len(urls_to_show)} URLs discovered:")
+                
+                # Show URLs up to the limit
+                for j, url in enumerate(urls_to_show, 1):
                     output.append(f"    {j}. {url}")
+                    url_count += 1
+                
+                if len(urls) > len(urls_to_show):
+                    output.append(f"    ... and {len(urls) - len(urls_to_show)} more URLs truncated")
                 output.append("")
 
         # Format base page content (fallback) with source attribution
