@@ -423,8 +423,8 @@ class WebCrawlerTool(Toolkit):
 
         return CrawlerRunConfig(
             cache_mode=cache_mode,
-            wait_until="commit",  # Fastest wait strategy (vs "load")
-            delay_before_return_html=0,  # Zero delay for maximum speed
+            wait_until="domcontentloaded",  # Fastest wait strategy (vs "load")
+            delay_before_return_html=0.5,  # Zero delay for maximum speed
             word_count_threshold=1,  # Lower threshold for faster processing
             process_iframes=False,  # Skip iframe processing
             remove_overlay_elements=True,  # Remove popups/modals quickly
