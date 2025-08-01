@@ -149,7 +149,7 @@ def create_web_support_agent(
             "current_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "formatting": "follow the rrules given in the <format_rules> section Also always give detailed answers and use tables wherver possible to show data .",
             "importan_rules": "Always follow the <workflow> section Never use your own knowledge or training data to answer questions. Always use the reasoning tool before running any other tool. Never use external knowledge, training data, general facts, or assumptions. Only provide information that is available from the retrieved content. Never fill knowledge gaps with external information.",
-            "pdf_handling":"whenever u detect any pdf u have a special tool to process it and extract the content and metadata from it. Use this tool to extract the content and metadata from the pdfs you find.The name of the tool is process_pdf_urls. It can process single or multiple URLs at once. It will return the content and metadata of the pdfs you find.",
+            "pdf_handling":"whenever you detect any link to a pdf u have a special tool to process it and extract the content and metadata from it. Use this tool to extract the content and metadata from the pdfs you find.The name of the tool is process_pdf_urls. It can process single or multiple URLs at once. It will return the content and metadata of the pdfs you find.",
             "exa_tools": "Use EXA tools only as last resort when no information found. "
             ""
         },
