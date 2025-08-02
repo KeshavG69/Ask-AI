@@ -528,7 +528,7 @@
         "kind": 2,
         "importPath": "agent",
         "description": "agent",
-        "peekOfCode": "def create_web_support_agent(\n    starting_urls: List, company_name: str, api_key: str = None, storage=storage, session_id: str = None\n) -> Agent:\n    \"\"\"Create a web support agent with data retrieval capabilities.\"\"\"\n    # Create the crawler tool - it will automatically extract allowed domains from starting URLs\n    crawler_tool = WebCrawlerTool(starting_urls=starting_urls)\n    # Use provided API key or fallback to environment variable\n    api_key = api_key or os.getenv('OPENAI_API_KEY')\n    # Create agent with intelligent instructions\n    agent = Agent(",
+        "peekOfCode": "def create_web_support_agent(\n    starting_urls: List, company_name: str, api_key: str = None, storage=storage, session_id: str = None\n) -> Agent:\n    \"\"\"Create a web support agent with data retrieval capabilities.\"\"\"\n    # Create the crawler tool - it will automatically extract allowed domains from starting URLs\n    crawler_tool = WebCrawlerTool(starting_urls=starting_urls)\n    # Use provided API key or fallback to environment variable\n    # Create agent with intelligent instructions\n    agent = Agent(\n        model=OpenAIChat(id=\"gpt-4.1-mini\", api_key=api_key),",
         "detail": "agent",
         "documentation": {}
     },

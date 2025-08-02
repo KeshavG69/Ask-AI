@@ -33,7 +33,7 @@ def create_web_support_agent(
     crawler_tool = WebCrawlerTool(starting_urls=starting_urls)
 
     # Use provided API key or fallback to environment variable
-    api_key = api_key or os.getenv('OPENAI_API_KEY')
+    
 
     # Create agent with intelligent instructions
     agent = Agent(
@@ -50,7 +50,7 @@ def create_web_support_agent(
                 answer=False,
                 text=True,
                 summary=False,
-                livecrawl="preferred",
+                livecrawl="preferred"
             ),
         ],
         description=f"You are an agent that answers user queries based exclusively on content from the starting URLs: {', '.join(starting_urls)}. The starting URLs serve only as the content source - you retrieve information from them and answer questions based on that content. You can process both web pages and PDF files from these domains.",
