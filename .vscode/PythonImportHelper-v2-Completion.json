@@ -76,14 +76,6 @@
         "documentation": {}
     },
     {
-        "label": "WebCrawlerTool",
-        "importPath": "tool",
-        "description": "tool",
-        "isExtraImport": true,
-        "detail": "tool",
-        "documentation": {}
-    },
-    {
         "label": "ReasoningTools",
         "importPath": "agno.tools.reasoning",
         "description": "agno.tools.reasoning",
@@ -189,6 +181,14 @@
     },
     {
         "label": "Dict",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Optional",
         "importPath": "typing",
         "description": "typing",
         "isExtraImport": true,
@@ -380,86 +380,6 @@
         "importPath": "asyncio",
         "description": "asyncio",
         "detail": "asyncio",
-        "documentation": {}
-    },
-    {
-        "label": "AsyncWebCrawler",
-        "importPath": "crawl4ai",
-        "description": "crawl4ai",
-        "isExtraImport": true,
-        "detail": "crawl4ai",
-        "documentation": {}
-    },
-    {
-        "label": "CrawlerRunConfig",
-        "importPath": "crawl4ai",
-        "description": "crawl4ai",
-        "isExtraImport": true,
-        "detail": "crawl4ai",
-        "documentation": {}
-    },
-    {
-        "label": "AsyncWebCrawler",
-        "importPath": "crawl4ai",
-        "description": "crawl4ai",
-        "isExtraImport": true,
-        "detail": "crawl4ai",
-        "documentation": {}
-    },
-    {
-        "label": "CrawlerRunConfig",
-        "importPath": "crawl4ai",
-        "description": "crawl4ai",
-        "isExtraImport": true,
-        "detail": "crawl4ai",
-        "documentation": {}
-    },
-    {
-        "label": "BrowserConfig",
-        "importPath": "crawl4ai",
-        "description": "crawl4ai",
-        "isExtraImport": true,
-        "detail": "crawl4ai",
-        "documentation": {}
-    },
-    {
-        "label": "CacheMode",
-        "importPath": "crawl4ai",
-        "description": "crawl4ai",
-        "isExtraImport": true,
-        "detail": "crawl4ai",
-        "documentation": {}
-    },
-    {
-        "label": "PDFCrawlerStrategy",
-        "importPath": "crawl4ai.processors.pdf",
-        "description": "crawl4ai.processors.pdf",
-        "isExtraImport": true,
-        "detail": "crawl4ai.processors.pdf",
-        "documentation": {}
-    },
-    {
-        "label": "PDFContentScrapingStrategy",
-        "importPath": "crawl4ai.processors.pdf",
-        "description": "crawl4ai.processors.pdf",
-        "isExtraImport": true,
-        "detail": "crawl4ai.processors.pdf",
-        "documentation": {}
-    },
-    {
-        "label": "PDFCrawlerStrategy",
-        "importPath": "crawl4ai.processors.pdf",
-        "description": "crawl4ai.processors.pdf",
-        "isExtraImport": true,
-        "detail": "crawl4ai.processors.pdf",
-        "documentation": {}
-    },
-    {
-        "label": "PDFContentScrapingStrategy",
-        "importPath": "crawl4ai.processors.pdf",
-        "description": "crawl4ai.processors.pdf",
-        "isExtraImport": true,
-        "detail": "crawl4ai.processors.pdf",
         "documentation": {}
     },
     {
@@ -667,65 +587,11 @@
         "documentation": {}
     },
     {
-        "label": "test_single_pdf",
-        "kind": 2,
-        "importPath": "test_pdf_tool",
-        "description": "test_pdf_tool",
-        "peekOfCode": "def test_single_pdf():\n    \"\"\"Test processing a single PDF URL.\"\"\"\n    print(\"=\" * 60)\n    print(\"TEST 1: Processing a single PDF URL\")\n    print(\"=\" * 60)\n    # Initialize the WebCrawlerTool\n    tool = WebCrawlerTool()\n    # Test with a single PDF URL (arXiv paper)\n    pdf_url = \"https://arxiv.org/pdf/2310.06825.pdf\"\n    print(f\"Processing PDF: {pdf_url}\")",
-        "detail": "test_pdf_tool",
-        "documentation": {}
-    },
-    {
-        "label": "test_multiple_pdfs",
-        "kind": 2,
-        "importPath": "test_pdf_tool",
-        "description": "test_pdf_tool",
-        "peekOfCode": "def test_multiple_pdfs():\n    \"\"\"Test processing multiple PDF URLs.\"\"\"\n    print(\"\\n\" + \"=\" * 60)\n    print(\"TEST 2: Processing multiple PDF URLs\")\n    print(\"=\" * 60)\n    # Initialize the WebCrawlerTool\n    tool = WebCrawlerTool()\n    # Test with multiple PDF URLs\n    pdf_urls = [\n        \"https://arxiv.org/pdf/2310.06825.pdf\",  # Machine Learning paper",
-        "detail": "test_pdf_tool",
-        "documentation": {}
-    },
-    {
-        "label": "test_invalid_pdf_url",
-        "kind": 2,
-        "importPath": "test_pdf_tool",
-        "description": "test_pdf_tool",
-        "peekOfCode": "def test_invalid_pdf_url():\n    \"\"\"Test handling of invalid PDF URLs.\"\"\"\n    print(\"\\n\" + \"=\" * 60)\n    print(\"TEST 3: Testing invalid PDF URL handling\")\n    print(\"=\" * 60)\n    # Initialize the WebCrawlerTool\n    tool = WebCrawlerTool()\n    # Test with non-PDF URLs\n    invalid_urls = [\n        \"https://example.com/not-a-pdf.html\",",
-        "detail": "test_pdf_tool",
-        "documentation": {}
-    },
-    {
-        "label": "test_mixed_urls",
-        "kind": 2,
-        "importPath": "test_pdf_tool",
-        "description": "test_pdf_tool",
-        "peekOfCode": "def test_mixed_urls():\n    \"\"\"Test processing a mix of valid and invalid PDF URLs.\"\"\"\n    print(\"\\n\" + \"=\" * 60)\n    print(\"TEST 4: Testing mixed valid/invalid PDF URLs\")\n    print(\"=\" * 60)\n    # Initialize the WebCrawlerTool\n    tool = WebCrawlerTool()\n    # Mix of valid and invalid URLs\n    mixed_urls = [\n        \"https://arxiv.org/pdf/2310.06825.pdf\",  # Valid PDF",
-        "detail": "test_pdf_tool",
-        "documentation": {}
-    },
-    {
-        "label": "test_pdf_url_validation",
-        "kind": 2,
-        "importPath": "test_pdf_tool",
-        "description": "test_pdf_tool",
-        "peekOfCode": "def test_pdf_url_validation():\n    \"\"\"Test the PDF URL validation function.\"\"\"\n    print(\"\\n\" + \"=\" * 60)\n    print(\"TEST 5: Testing PDF URL validation\")\n    print(\"=\" * 60)\n    # Initialize the WebCrawlerTool\n    tool = WebCrawlerTool()\n    # Test various URL patterns\n    test_urls = [\n        \"https://example.com/document.pdf\",  # Should be valid",
-        "detail": "test_pdf_tool",
-        "documentation": {}
-    },
-    {
-        "label": "main",
-        "kind": 2,
-        "importPath": "test_pdf_tool",
-        "description": "test_pdf_tool",
-        "peekOfCode": "def main():\n    \"\"\"Run all PDF processing tests.\"\"\"\n    print(\"🔬 Testing PDF Processing Capabilities of WebCrawlerTool\")\n    print(\"=\" * 80)\n    try:\n        # Run validation test first (doesn't require network)\n        test_pdf_url_validation()\n        # Run network-dependent tests\n        test_single_pdf()\n        test_multiple_pdfs()",
-        "detail": "test_pdf_tool",
-        "documentation": {}
-    },
-    {
         "label": "WebCrawlerTool",
         "kind": 6,
         "importPath": "tool",
         "description": "tool",
-        "peekOfCode": "class WebCrawlerTool(Toolkit):\n    \"\"\"Simple web crawler tool that returns content and links for agent decision making.\"\"\"\n    def __init__(self, starting_urls: List[str] = None, max_links_per_page: int = 50):\n        super().__init__()\n        self.starting_urls = starting_urls or []\n        self.allowed_domains = self._extract_domains_from_urls(self.starting_urls)\n        self.max_links_per_page = max_links_per_page\n        self.register(self.crawl_selected_urls)\n        self.register(self.process_pdf_urls)\n    def _extract_domains_from_urls(self, urls: List[str]) -> List[str]:",
+        "peekOfCode": "class WebCrawlerTool(Toolkit):\n    \"\"\"Web crawler tool using Jina Reader API for content extraction.\"\"\"\n    def __init__(self, starting_urls: List[str] = None, api_key: Optional[str] = None):\n        super().__init__()\n        self.starting_urls = starting_urls or []\n        self.allowed_domains = self._extract_domains_from_urls(self.starting_urls)\n        self.api_key = api_key or os.getenv('JINA_API_KEY')\n        self.jina_base_url = \"https://r.jina.ai\"\n        self.register(self.crawl_selected_urls)\n        self.register(self.process_pdf_urls)",
         "detail": "tool",
         "documentation": {}
     }

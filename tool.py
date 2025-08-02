@@ -1,23 +1,23 @@
 import asyncio
 import re
 import xml.etree.ElementTree as ET
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 from urllib.parse import urljoin, urlparse
 from agno.tools import Toolkit
-from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, BrowserConfig, CacheMode
-from crawl4ai.processors.pdf import PDFCrawlerStrategy, PDFContentScrapingStrategy
 import aiohttp
 import time
+import os
 
 
 class WebCrawlerTool(Toolkit):
-    """Simple web crawler tool that returns content and links for agent decision making."""
+    """Web crawler tool using Jina Reader API for content extraction."""
 
-    def __init__(self, starting_urls: List[str] = None, max_links_per_page: int = 50):
+    def __init__(self, starting_urls: List[str] = None, api_key: Optional[str] = None):
         super().__init__()
         self.starting_urls = starting_urls or []
         self.allowed_domains = self._extract_domains_from_urls(self.starting_urls)
-        self.max_links_per_page = max_links_per_page
+        self.api_key = api_key or os.getenv('JINA_API_KEY')
+        self.jina_base_url = "https://r.jina.ai"
         self.register(self.crawl_selected_urls)
         self.register(self.process_pdf_urls)
 
@@ -72,6 +72,90 @@ class WebCrawlerTool(Toolkit):
             return f"{parsed.scheme}://{parsed.netloc}"
         except:
             return url
+
+    async def _jina_read_url(self, url: str, **options) -> str:
+        """Read a single URL using Jina Reader API."""
+        try:
+            jina_url = f"{self.jina_base_url}/{url}"
+            headers = {}
+            
+            # Add authorization header if API key is available
+            if self.api_key:
+                headers['Authorization'] = f'Bearer {self.api_key}'
+                print(f"🔑 Using Jina API key for higher rate limits")
+            
+            # Add custom options as headers if provided
+            if 'timeout' in options:
+                headers['X-Timeout'] = str(options['timeout'])
+            if 'image_caption' in options and options['image_caption']:
+                headers['X-With-Generated-Alt'] = 'true'
+            if 'gather_links' in options and options['gather_links']:
+                headers['X-With-Links-Summary'] = 'true'
+            if 'gather_images' in options and options['gather_images']:
+                headers['X-With-Images-Summary'] = 'true'
+
+            async with aiohttp.ClientSession() as session:
+                start_time = time.time()
+                async with session.get(jina_url, headers=headers, timeout=30) as response:
+                    if response.status == 200:
+                        content = await response.text()
+                        crawl_time = time.time() - start_time
+                        print(f"⚡ Jina Reader processed {url} in {crawl_time:.2f}s - {len(content)} chars")
+                        return content
+                    else:
+                        error_msg = f"Jina Reader API error {response.status} for {url}"
+                        print(f"❌ {error_msg}")
+                        return f"Error: {error_msg}"
+                        
+        except Exception as e:
+            print(f"❌ Failed to read {url} with Jina Reader: {str(e)}")
+            return f"Error reading {url}: {str(e)}"
+
+    async def _jina_read_multiple_urls(self, urls: List[str], **options) -> List[Tuple[str, str]]:
+        """Read multiple URLs concurrently using Jina Reader API."""
+        if not urls:
+            return []
+
+        start_time = time.time()
+        
+        # Smart concurrency - Jina Reader can handle high concurrency
+        max_concurrent = min(len(urls), 10)  # Higher than crawl4ai since it's just API calls
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        print(f"🚀 Starting Jina Reader batch processing of {len(urls)} URLs with {max_concurrent} concurrent workers")
+
+        async def read_with_concurrency_limit(url: str) -> Tuple[str, str]:
+            """Read a single URL with concurrency limiting."""
+            async with semaphore:
+                content = await self._jina_read_url(url, **options)
+                return url, content
+
+        # Create tasks for all URLs
+        tasks = [read_with_concurrency_limit(url) for url in urls]
+
+        # Use asyncio.gather for maximum parallel execution
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Process results and handle exceptions
+        processed_results = []
+        successful_reads = 0
+        failed_reads = 0
+
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                processed_results.append((urls[i], f"Exception: {str(result)}"))
+                failed_reads += 1
+                print(f"❌ Failed to read {urls[i]}: {str(result)}")
+            else:
+                processed_results.append(result)
+                successful_reads += 1
+
+        total_time = time.time() - start_time
+        avg_time_per_url = total_time / len(urls) if urls else 0
+
+        print(f"⚡ Completed Jina Reader batch: {successful_reads} successful, {failed_reads} failed in {total_time:.2f}s (avg {avg_time_per_url:.2f}s per URL)")
+
+        return processed_results
 
     async def discover_urls_from_sources(
         self, input_url: str, bypass_cache: bool = False
@@ -132,22 +216,19 @@ class WebCrawlerTool(Toolkit):
                     f"✅ Found {len(sitemap_urls)} URLs from sitemap discovery (including recursive)"
                 )
 
-            # Step 5: Fallback to base page content (only if no sitemap URLs found)
+            # Step 5: Fallback to base page content using Jina Reader (only if no sitemap URLs found)
             if not sources["sitemap_urls"]:
-                print(
-                    f"📄 No sitemap URLs found, falling back to base page content... ({'FRESH' if bypass_cache else 'CACHED'})"
-                )
+                print(f"📄 No sitemap URLs found, falling back to base page content with Jina Reader...")
                 try:
-                    _, content, _ = await self.crawl_single_url(input_url, bypass_cache)
-                    if content:
+                    # Replace crawl4ai call with Jina Reader API call
+                    content = await self._jina_read_url(input_url)
+                    if content and not content.startswith("Error"):
                         sources["base_page_content"] = content
-                        print(
-                            f"✅ Found {len(content)} characters of content from base page crawl"
-                        )
+                        print(f"✅ Found {len(content)} characters of content from base page via Jina Reader")
                     else:
                         print("⚠️ No content found on base page")
                 except Exception as e:
-                    print(f"⚠️ Base page crawling failed: {e}")
+                    print(f"⚠️ Base page reading failed: {e}")
 
         except Exception as e:
             print(f"⚠️ Discovery error: {e}")
@@ -361,140 +442,6 @@ class WebCrawlerTool(Toolkit):
             print(f"❌ Failed to process sitemap {sitemap_url}: {e}")
             return []
 
-    def extract_links(self, html_content: str, base_url: str) -> List[str]:
-        """Extract all links from HTML content and filter by allowed domains."""
-        links = []
-
-        # Find all href attributes
-        href_pattern = r'href=["\']([^"\']+)["\']'
-        matches = re.findall(href_pattern, html_content, re.IGNORECASE)
-
-        for href in matches:
-            try:
-                # Convert relative URLs to absolute
-                full_url = urljoin(base_url, href)
-
-                # Basic URL cleaning
-                full_url = full_url.split("#")[0]  # Remove anchors
-                full_url = full_url.rstrip("/")  # Remove trailing slash
-
-                # Check if it's a valid HTTP/HTTPS URL
-                if full_url.startswith(
-                    ("http://", "https://")
-                ) and self.is_allowed_domain(full_url):
-                    links.append(full_url)
-
-            except Exception:
-                continue
-
-        # Remove duplicates and limit
-        unique_links = list(dict.fromkeys(links))
-        return unique_links
-
-    def _get_optimized_browser_config(self) -> BrowserConfig:
-        """Get optimized browser configuration for maximum performance."""
-        return BrowserConfig(
-            headless=True,  # Always headless for production
-            text_mode=True,  # Disable images/heavy content
-            light_mode=True,  # Disable background features
-            java_script_enabled=True,  # Keep JS enabled but optimize
-            extra_args=[
-                "--disable-extensions",  # Disable browser extensions
-                "--disable-plugins",  # Disable plugins
-                "--disable-images",  # Skip image loading
-                "--no-sandbox",  # Better performance in containers
-                "--disable-dev-shm-usage",  # Better memory management
-                "--disable-background-networking",  # Reduce background activity
-                "--disable-background-timer-throttling",  # Better performance
-                "--disable-renderer-backgrounding",  # Prevent throttling
-                "--disable-backgrounding-occluded-windows",  # Performance
-                "--disable-features=TranslateUI",  # Skip translation
-                "--disable-ipc-flooding-protection",  # Performance
-                "--disable-web-security",  # Speed up requests
-                "--aggressive-cache-discard",  # Better memory management
-            ],
-        )
-
-    def _get_optimized_crawler_config(
-        self, bypass_cache: bool = False
-    ) -> CrawlerRunConfig:
-        """Get optimized crawler configuration for maximum performance."""
-        cache_mode = CacheMode.BYPASS if bypass_cache else CacheMode.ENABLED
-
-        return CrawlerRunConfig(
-            cache_mode=cache_mode,
-            wait_until="domcontentloaded",  # Fastest wait strategy (vs "load")
-            delay_before_return_html=0.5,  # Zero delay for maximum speed
-            word_count_threshold=1,  # Lower threshold for faster processing
-            process_iframes=False,  # Skip iframe processing
-            remove_overlay_elements=True,  # Remove popups/modals quickly
-            # excluded_tags=["script", "style", "nav", "header", "footer", "aside"],  # Skip non-content
-            only_text=False,  # Keep some structure for links
-            ignore_body_visibility=True,  # Skip visibility checks
-            # excluded_selector="#ads, .advertisement, .social-media, .sidebar",  # Skip common clutter
-            simulate_user=False,  # Skip user simulation for speed
-            override_navigator=False,  # Skip navigator override
-        )
-
-    async def crawl_single_url(
-        self, url: str, bypass_cache: bool = False
-    ) -> Tuple[str, str, List[str]]:
-        """Crawl a single URL with optimized performance configuration."""
-        start_time = time.time()
-
-        try:
-            # Use optimized configurations
-            browser_config = self._get_optimized_browser_config()
-            crawler_config = self._get_optimized_crawler_config(bypass_cache)
-
-            async with AsyncWebCrawler(config=browser_config) as crawler:
-                result = await crawler.arun(url=url, config=crawler_config)
-
-                if not result or not result.success:
-                    return (
-                        url,
-                        f"Failed to crawl: {result.error_message if result else 'Unknown error'}",
-                        [],
-                    )
-
-                # Extract content using best available method
-                content = self._extract_best_content(result)
-
-                # Extract links from raw HTML
-                raw_html = result.html or ""
-                links = self.extract_links(raw_html, url)
-
-                crawl_time = time.time() - start_time
-                print(
-                    f"⚡ Crawled {url} in {crawl_time:.2f}s ({'FRESH' if bypass_cache else 'CACHED'}) - {len(content)} chars"
-                )
-
-                return url, content, links
-
-        except Exception as e:
-            crawl_time = time.time() - start_time
-            print(f"❌ Failed to crawl {url} in {crawl_time:.2f}s: {str(e)}")
-            return url, f"Error crawling {url}: {str(e)}", []
-
-    def _extract_best_content(self, result) -> str:
-        """Extract the best available content using simple, reliable methods."""
-        # Try markdown first (usually cleanest)
-        if result.markdown and len(result.markdown.strip()) > 50:
-            return result.markdown
-
-        # Fall back to cleaned HTML
-        if result.cleaned_html and len(result.cleaned_html.strip()) > 50:
-            return result.cleaned_html
-
-        # Last resort: extract text from raw HTML
-        if result.html and len(result.html.strip()) > 100:
-            text = re.sub(r"<[^>]+>", "", result.html)
-            text = re.sub(r"\s+", " ", text).strip()
-            if len(text) > 50:
-                return text
-
-        return "No content extracted"
-
     def discover_site_structure(self, urls) -> str:
         """
         Discover available content from llms.txt and base pages for agent decision-making.
@@ -537,10 +484,10 @@ class WebCrawlerTool(Toolkit):
                 return "❌ No valid URLs provided or all URLs outside allowed domains"
 
             print(
-                f"🔍 Discovering site structure for {len(url_list)} URLs: {', '.join([urlparse(u).netloc for u in url_list])} (Cache: ENABLED for discovery)"
+                f"🔍 Discovering site structure for {len(url_list)} URLs: {', '.join([urlparse(u).netloc for u in url_list])} (Using Jina Reader)"
             )
 
-            # Handle async discovery properly for multiple URLs - use cache for discovery
+            # Handle async discovery properly for multiple URLs
             try:
                 loop = asyncio.get_running_loop()
                 import concurrent.futures
@@ -548,23 +495,17 @@ class WebCrawlerTool(Toolkit):
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         self._run_multi_discovery, url_list, False
-                    )  # Use cache for discovery
+                    )
                     combined_discovered = future.result()
             except RuntimeError:
                 combined_discovered = asyncio.run(
-                    self._discover_multiple_urls(
-                        url_list, False
-                    )  # Use cache for discovery
+                    self._discover_multiple_urls(url_list, False)
                 )
 
             return self._format_multi_discovery_results(combined_discovered, url_list)
 
         except Exception as e:
             return f"❌ Error in discover_site_structure: {str(e)}"
-
-    def _run_discovery(self, url):
-        """Helper method to run discovery in a new event loop."""
-        return asyncio.run(self.discover_urls_from_sources(url))
 
     def _run_multi_discovery(self, url_list, bypass_cache=False):
         """Helper method to run multi-URL discovery in a new event loop."""
@@ -719,53 +660,11 @@ class WebCrawlerTool(Toolkit):
 
         return "\n".join(output)
 
-    def _format_discovery_results(self, discovered: Dict[str, List[str]]) -> str:
-        """Format discovery results for agent decision-making."""
-        output = []
-        output.append("=== SITE STRUCTURE DISCOVERY ===\n")
-
-        total_urls = 0
-
-        # Format llms.txt URLs (highest priority)
-        llms_urls = discovered.get("llms_txt", [])
-        if llms_urls:
-            total_urls += len(llms_urls)
-            output.append(
-                f"📋 From llms.txt ({len(llms_urls)} AI-optimized URLs found):"
-            )
-            for i, url in enumerate(llms_urls, 1):
-                output.append(f"  {i}. {url}")
-            output.append("")
-
-        # Format base page content (fallback)
-        base_content = discovered.get("base_page_content", "")
-        if base_content:
-            output.append(f"📄 From base page crawl ({len(base_content)} chars found):")
-            output.append(f"{base_content}")
-            output.append("")
-
-        # Summary
-        output.append("=== DISCOVERY SUMMARY ===")
-        output.append(f"Total URLs discovered: {total_urls}")
-        output.append(
-            "💡 Use 'crawl_selected_urls' tool to crawl specific URLs that are relevant to the user's question."
-        )
-
-        if total_urls == 0:
-            output.append(
-                "\n⚠️ No URLs discovered from any source (llms.txt or base page links)."
-            )
-            output.append(
-                "You can still crawl the base URL directly using 'crawl_selected_urls'."
-            )
-
-        return "\n".join(output)
-
     def crawl_selected_urls(self, urls) -> str:
         """
         Crawl specific URLs selected by the agent after site structure discovery.
 
-        Always gets fresh content (bypasses cache) to ensure up-to-date information.
+        Uses Jina Reader API for clean, LLM-friendly content extraction.
 
         Args:
             urls: URL(s) to crawl - can be a single string or list of strings
@@ -785,7 +684,7 @@ class WebCrawlerTool(Toolkit):
                 except TypeError:
                     urls = [str(urls)]  # Fallback for non-iterable types
 
-            print(f"🔧 Processing {len(urls)} URL(s) for crawling")
+            print(f"🔧 Processing {len(urls)} URL(s) for crawling with Jina Reader")
 
             # Parse and validate URLs
             url_list = []
@@ -799,127 +698,39 @@ class WebCrawlerTool(Toolkit):
             if not url_list:
                 return "❌ No valid URLs provided"
 
-            print(f"🔍 Crawling {len(url_list)} selected URLs... (FRESH content)")
+            print(f"🔍 Reading {len(url_list)} selected URLs with Jina Reader API...")
 
-            # Handle async crawling properly - always bypass cache for content
+            # Handle async reading properly
             try:
                 loop = asyncio.get_running_loop()
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        self._run_simple_crawling, url_list, True
-                    )  # Always bypass cache
+                    future = executor.submit(self._run_jina_reading, url_list)
                     results = future.result()
             except RuntimeError:
-                results = asyncio.run(
-                    self._crawl_multiple_urls(url_list, True)
-                )  # Always bypass cache
+                results = asyncio.run(self._jina_read_multiple_urls(url_list))
 
-            return self._format_results(results)
+            return self._format_jina_results(results)
 
         except Exception as e:
             return f"❌ Error in crawl_selected_urls: {str(e)}"
 
-    def _run_simple_crawling(self, urls, bypass_cache=False):
-        """Helper method to run simple crawling in a new event loop."""
-        return asyncio.run(self._crawl_multiple_urls(urls, bypass_cache))
+    def _run_jina_reading(self, urls):
+        """Helper method to run Jina reading in a new event loop."""
+        return asyncio.run(self._jina_read_multiple_urls(urls))
 
-    def _run_smart_crawling(self, urls):
-        """Helper method to run smart crawling in a new event loop."""
-        return asyncio.run(self._smart_crawl_multiple_urls(urls))
-
-    async def _smart_crawl_multiple_urls(
-        self, initial_urls: List[str]
-    ) -> List[Tuple[str, str, List[str]]]:
-        """Smart crawling - now primarily returns content directly from llms.txt."""
-        urls_to_crawl = set(initial_urls)
-
-        # For each initial URL, discover content (not just URLs)
-        for url in initial_urls:
-            try:
-                discovered = await self.discover_urls_from_sources(url)
-
-                # Note: Now returns content directly, not URLs to crawl
-                # The content is already available in the discovery results
-                print(
-                    f"📋 Discovered content from {url}: {len(discovered.get('llms_txt_content', ''))} chars from llms.txt, {len(discovered.get('base_page_content', ''))} chars from base page"
-                )
-
-            except Exception as e:
-                print(f"⚠️ Content discovery failed for {url}: {e}")
-
-        # Convert to list for fallback crawling
-        final_urls = list(urls_to_crawl)
-        print(
-            f"📋 Fallback crawling {len(final_urls)} URLs (content may already be available from discovery)"
-        )
-
-        # Crawl all selected URLs as fallback
-        return await self._crawl_multiple_urls(final_urls)
-
-    async def _crawl_multiple_urls(
-        self, urls: List[str], bypass_cache: bool = False
-    ) -> List[Tuple[str, str, List[str]]]:
-        """Crawl multiple URLs with optimized concurrency management for maximum performance."""
-        if not urls:
-            return []
-
-        start_time = time.time()
-
-        # Smart concurrency based on URL count and system capabilities
-        max_concurrent = min(len(urls), 5)  # Optimal concurrency for most systems
-        semaphore = asyncio.Semaphore(max_concurrent)
-
-        print(
-            f"🚀 Starting optimized crawl of {len(urls)} URLs with {max_concurrent} concurrent workers"
-        )
-
-        async def crawl_with_concurrency_limit(url: str) -> Tuple[str, str, List[str]]:
-            """Crawl a single URL with concurrency limiting."""
-            async with semaphore:
-                return await self.crawl_single_url(url, bypass_cache)
-
-        # Create tasks for all URLs
-        tasks = [crawl_with_concurrency_limit(url) for url in urls]
-
-        # Use asyncio.gather for maximum parallel execution
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # Process results and handle exceptions
-        processed_results = []
-        successful_crawls = 0
-        failed_crawls = 0
-
-        for i, result in enumerate(results):
-            if isinstance(result, Exception):
-                processed_results.append((urls[i], f"Exception: {str(result)}", []))
-                failed_crawls += 1
-                print(f"❌ Failed to crawl {urls[i]}: {str(result)}")
-            else:
-                processed_results.append(result)
-                successful_crawls += 1
-
-        total_time = time.time() - start_time
-        avg_time_per_url = total_time / len(urls) if urls else 0
-
-        print(
-            f"⚡ Completed crawl batch: {successful_crawls} successful, {failed_crawls} failed in {total_time:.2f}s (avg {avg_time_per_url:.2f}s per URL)"
-        )
-
-        return processed_results
-
-    def _format_results(self, results: List[Tuple[str, str, List[str]]]) -> str:
-        """Format crawling results for agent consumption."""
+    def _format_jina_results(self, results: List[Tuple[str, str]]) -> str:
+        """Format Jina Reader results for agent consumption."""
         if not results:
             return "❌ No results to display"
 
         output = []
-        output.append("=== CRAWLED CONTENT ===\n")
+        output.append("=== JINA READER CONTENT ===\n")
 
         # Add content from each URL with stats
         total_content_length = 0
-        for url, content, links in results:
+        for url, content in results:
             content_length = len(content)
             total_content_length += content_length
 
@@ -931,40 +742,24 @@ class WebCrawlerTool(Toolkit):
             output.append("")  # Empty line for readability
 
         # Add summary
-        output.append(f"=== CRAWLING SUMMARY ===")
-        output.append(f"Total URLs crawled: {len(results)}")
+        output.append(f"=== READING SUMMARY ===")
+        output.append(f"Total URLs processed: {len(results)}")
         output.append(f"Total content extracted: {total_content_length} characters")
-        output.append("")
 
-        # Add discovered links section
-        output.append("=== DISCOVERED LINKS ===\n")
-
-        total_links = 0
-        for url, content, links in results:
-            if links:
-                total_links += len(links)
-                output.append(f"From {url} ({len(links)} links found):")
-                for link in links:  # Show all discovered links
-                    output.append(f"- {link}")
-                output.append("")
-
-        output.append(f"Total unique links discovered: {total_links}")
         return "\n".join(output)
-
-    # ========== PDF PROCESSING METHODS ==========
 
     def process_pdf_urls(self, urls) -> str:
         """
-        Process PDF URLs to extract content and metadata.
-
-        Always gets fresh content (bypasses cache) to ensure up-to-date information.
+        Process PDF URLs to extract content and metadata using Jina Reader API.
+        
+        Jina Reader handles PDFs natively with better processing than crawl4ai.
 
         Args:
             urls: PDF URL(s) to process - can be a single string or list of strings
                  (e.g., "https://arxiv.org/pdf/paper.pdf" or ["https://site.com/doc1.pdf", "https://site.com/doc2.pdf"])
 
         Returns:
-            str: Formatted content and metadata from processed PDFs
+            str: Formatted content from processed PDFs
         """
         try:
             # Fix input type handling - ensure urls is always a list
@@ -977,7 +772,7 @@ class WebCrawlerTool(Toolkit):
                 except TypeError:
                     urls = [str(urls)]  # Fallback for non-iterable types
 
-            print(f"📄 Processing {len(urls)} PDF URL(s)")
+            print(f"📄 Processing {len(urls)} PDF URL(s) with Jina Reader")
 
             # Parse and validate PDF URLs
             url_list = []
@@ -985,247 +780,47 @@ class WebCrawlerTool(Toolkit):
                 url = url.strip()
                 if url:
                     validated_url = self._ensure_valid_url(url)
-                    if (
-                        validated_url
-                        and self._validate_pdf_url(validated_url)
-                        and self.is_allowed_domain(validated_url)
-                    ):
+                    if validated_url and self.is_allowed_domain(validated_url):
                         url_list.append(validated_url)
-                    elif validated_url and not self._validate_pdf_url(validated_url):
-                        print(f"⚠️ URL does not appear to be a PDF: {validated_url}")
-                    elif validated_url:
-                        print(f"⚠️ URL not in allowed domains: {validated_url}")
+                        print(f"✅ Valid PDF URL: {validated_url}")
 
             if not url_list:
                 return "❌ No valid PDF URLs provided"
 
-            print(f"🔍 Processing {len(url_list)} PDF URLs... (FRESH content)")
+            print(f"🔍 Processing {len(url_list)} PDF URLs with Jina Reader API...")
 
-            # Handle async PDF processing properly - always bypass cache for content
+            # Handle async PDF processing properly
             try:
                 loop = asyncio.get_running_loop()
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(self._run_pdf_processing, url_list)
+                    future = executor.submit(self._run_jina_reading, url_list)
                     results = future.result()
             except RuntimeError:
-                results = asyncio.run(self._process_multiple_pdfs(url_list))
+                results = asyncio.run(self._jina_read_multiple_urls(url_list))
 
-            return self._format_pdf_results(results)
+            return self._format_pdf_jina_results(results)
 
         except Exception as e:
             return f"❌ Error in process_pdf_urls: {str(e)}"
 
-    def _validate_pdf_url(self, url: str) -> bool:
-        """Check if URL likely points to a PDF file."""
-        try:
-            parsed = urlparse(url)
-            path = parsed.path.lower()
-
-            # Check for .pdf extension
-            if path.endswith(".pdf"):
-                return True
-
-            # Check for common PDF-serving patterns
-            pdf_patterns = [
-                "/pdf/",
-                "download.pdf",
-                "viewpdf",
-                "pdfviewer",
-                ".pdf?",
-                "type=pdf",
-            ]
-
-            url_lower = url.lower()
-            return any(pattern in url_lower for pattern in pdf_patterns)
-
-        except Exception:
-            return False
-
-    def _get_pdf_crawler_config(self) -> CrawlerRunConfig:
-        """Get PDF-optimized crawler configuration."""
-        # Use PDFContentScrapingStrategy for PDF processing
-        pdf_scraping_strategy = PDFContentScrapingStrategy()
-
-        return CrawlerRunConfig(
-            scraping_strategy=pdf_scraping_strategy,
-            cache_mode=CacheMode.BYPASS,  # Always get fresh PDF content
-            wait_until="commit",
-            delay_before_return_html=0,
-            word_count_threshold=1,
-            process_iframes=False,
-            simulate_user=False,
-            override_navigator=False,
-        )
-
-    async def _process_single_pdf(self, url: str) -> Tuple[str, str, Dict[str, str]]:
-        """Process a single PDF URL with PDF-specific configuration."""
-        start_time = time.time()
-
-        try:
-            # Initialize PDF crawler strategy
-            pdf_crawler_strategy = PDFCrawlerStrategy()
-            crawler_config = self._get_pdf_crawler_config()
-
-            async with AsyncWebCrawler(
-                crawler_strategy=pdf_crawler_strategy
-            ) as crawler:
-                print(f"📄 Attempting to process PDF: {url}")
-                result = await crawler.arun(url=url, config=crawler_config)
-
-                if not result or not result.success:
-                    return (
-                        url,
-                        f"Failed to process PDF: {result.error_message if result else 'Unknown error'}",
-                        {},
-                    )
-
-                # Extract PDF content and metadata
-                content, metadata = self._extract_pdf_content_and_metadata(result)
-
-                crawl_time = time.time() - start_time
-                print(
-                    f"📄 Processed PDF {url} in {crawl_time:.2f}s - {len(content)} chars"
-                )
-
-                return url, content, metadata
-
-        except Exception as e:
-            crawl_time = time.time() - start_time
-            print(f"❌ Failed to process PDF {url} in {crawl_time:.2f}s: {str(e)}")
-            return url, f"Error processing PDF {url}: {str(e)}", {}
-
-    def _extract_pdf_content_and_metadata(self, result) -> Tuple[str, Dict[str, str]]:
-        """Extract content and metadata from PDF processing result."""
-        content = ""
-        metadata = {}
-
-        try:
-            # Extract text content
-            if result.markdown:
-                if (
-                    hasattr(result.markdown, "raw_markdown")
-                    and result.markdown.raw_markdown
-                ):
-                    content = result.markdown.raw_markdown
-                elif isinstance(result.markdown, str):
-                    content = result.markdown
-                else:
-                    content = str(result.markdown)
-            elif result.cleaned_html:
-                # Fallback to cleaned HTML if markdown is not available
-                content = result.cleaned_html
-
-            # Extract metadata
-            if hasattr(result, "metadata") and result.metadata:
-                metadata = {
-                    "title": result.metadata.get("title", "N/A"),
-                    "author": result.metadata.get("author", "N/A"),
-                    "subject": result.metadata.get("subject", "N/A"),
-                    "creator": result.metadata.get("creator", "N/A"),
-                    "producer": result.metadata.get("producer", "N/A"),
-                    "creation_date": result.metadata.get("creation_date", "N/A"),
-                    "modification_date": result.metadata.get(
-                        "modification_date", "N/A"
-                    ),
-                    "pages": result.metadata.get("pages", "N/A"),
-                }
-
-            # If no content extracted, provide a message
-            if not content or len(content.strip()) < 10:
-                content = "No text content could be extracted from this PDF"
-
-        except Exception as e:
-            print(f"⚠️ Error extracting PDF content: {e}")
-            content = f"Error extracting content: {str(e)}"
-            metadata = {}
-
-        return content, metadata
-
-    def _run_pdf_processing(self, urls):
-        """Helper method to run PDF processing in a new event loop."""
-        return asyncio.run(self._process_multiple_pdfs(urls))
-
-    async def _process_multiple_pdfs(
-        self, urls: List[str]
-    ) -> List[Tuple[str, str, Dict[str, str]]]:
-        """Process multiple PDF URLs with optimized concurrency management."""
-        if not urls:
-            return []
-
-        start_time = time.time()
-
-        # Smart concurrency based on URL count (PDFs can be large, so lower concurrency)
-        max_concurrent = min(len(urls), 3)  # Lower concurrency for PDF processing
-        semaphore = asyncio.Semaphore(max_concurrent)
-
-        print(
-            f"📄 Starting PDF processing of {len(urls)} URLs with {max_concurrent} concurrent workers"
-        )
-
-        async def process_with_concurrency_limit(
-            url: str,
-        ) -> Tuple[str, str, Dict[str, str]]:
-            """Process a single PDF URL with concurrency limiting."""
-            async with semaphore:
-                return await self._process_single_pdf(url)
-
-        # Create tasks for all URLs
-        tasks = [process_with_concurrency_limit(url) for url in urls]
-
-        # Use asyncio.gather for parallel execution
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # Process results and handle exceptions
-        processed_results = []
-        successful_processes = 0
-        failed_processes = 0
-
-        for i, result in enumerate(results):
-            if isinstance(result, Exception):
-                processed_results.append((urls[i], f"Exception: {str(result)}", {}))
-                failed_processes += 1
-                print(f"❌ Failed to process PDF {urls[i]}: {str(result)}")
-            else:
-                processed_results.append(result)
-                successful_processes += 1
-
-        total_time = time.time() - start_time
-        avg_time_per_pdf = total_time / len(urls) if urls else 0
-
-        print(
-            f"📄 Completed PDF processing batch: {successful_processes} successful, {failed_processes} failed in {total_time:.2f}s (avg {avg_time_per_pdf:.2f}s per PDF)"
-        )
-
-        return processed_results
-
-    def _format_pdf_results(
-        self, results: List[Tuple[str, str, Dict[str, str]]]
-    ) -> str:
-        """Format PDF processing results for agent consumption."""
+    def _format_pdf_jina_results(self, results: List[Tuple[str, str]]) -> str:
+        """Format PDF processing results from Jina Reader for agent consumption."""
         if not results:
             return "❌ No PDF results to display"
 
         output = []
-        output.append("=== PDF PROCESSING RESULTS ===\n")
+        output.append("=== PDF PROCESSING RESULTS (Jina Reader) ===\n")
 
-        # Add content from each PDF with metadata
+        # Add content from each PDF with stats
         total_content_length = 0
-        for url, content, metadata in results:
+        for url, content in results:
             content_length = len(content)
             total_content_length += content_length
 
             output.append(f"PDF URL: {url}")
             output.append(f"Content Length: {content_length} characters")
-
-            # Add metadata if available
-            if metadata:
-                output.append("PDF Metadata:")
-                for key, value in metadata.items():
-                    if value and value != "N/A":
-                        output.append(f"  {key.replace('_', ' ').title()}: {value}")
-                output.append("")
 
             # Show ALL content - no truncation limit
             output.append("Extracted Content:")
@@ -1240,10 +835,8 @@ class WebCrawlerTool(Toolkit):
         # Count successful vs failed processing
         successful_pdfs = sum(
             1
-            for _, content, _ in results
-            if not content.startswith(
-                ("Failed to process", "Error processing", "Exception:")
-            )
+            for _, content in results
+            if not content.startswith(("Error:", "Exception:"))
         )
         failed_pdfs = len(results) - successful_pdfs
 

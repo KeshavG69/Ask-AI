@@ -6,10 +6,9 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "agno>=1.7.5",
-    "crawl4ai[pdf]>=0.7.1",
+    "aiohttp>=3.8.0",
     "exa-py>=1.14.17",
     "fastapi>=0.116.1",
-    "playwright>=1.53.0",
     "pymongo>=4.13.2",
     "uvicorn>=0.32.1",
 ]
