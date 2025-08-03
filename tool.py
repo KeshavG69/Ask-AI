@@ -1,13 +1,26 @@
 import asyncio
 import re
 import xml.etree.ElementTree as ET
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 from urllib.parse import urljoin, urlparse
+from dataclasses import dataclass
 from agno.tools import Toolkit
 from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, BrowserConfig, CacheMode
 from crawl4ai.processors.pdf import PDFCrawlerStrategy, PDFContentScrapingStrategy
 import aiohttp
 import time
+
+
+@dataclass
+class LoadMoreConfig:
+    """Configuration for load more functionality."""
+
+    enabled: bool = True
+    max_attempts: int = 3
+    wait_time: float = 2.0
+    scroll_before_click: bool = True
+    verify_content_change: bool = True
+    custom_selectors: List[str] = None
 
 
 class WebCrawlerTool(Toolkit):
@@ -415,37 +428,427 @@ class WebCrawlerTool(Toolkit):
             ],
         )
 
+    def _get_load_more_js_code(self, load_more_config: LoadMoreConfig) -> List[str]:
+        """Generate comprehensive JavaScript code for highly generalized load more functionality."""
+        js_commands = []
+
+        # Initial scroll to bottom
+        if load_more_config.scroll_before_click:
+            js_commands.append("window.scrollTo(0, document.body.scrollHeight);")
+            js_commands.append(
+                f"await new Promise(resolve => setTimeout(resolve, {int(load_more_config.wait_time * 1000)}));"
+            )
+
+        # Main load more detection and clicking logic with comprehensive generalization
+        load_more_script = f"""
+        (function() {{
+            let attempts = 0;
+            const maxAttempts = {load_more_config.max_attempts};
+            const waitTime = {int(load_more_config.wait_time * 1000)};
+            let totalClicked = 0;
+            
+            async function clickLoadMore() {{
+                // PHASE 1: Comprehensive selector patterns for maximum compatibility
+                const loadMoreSelectors = [
+                    // Custom selectors if provided (highest priority)
+                    {', '.join([f'"{sel}"' for sel in (load_more_config.custom_selectors or [])]) + ',' if load_more_config.custom_selectors else ''}
+                    
+                    // Direct semantic selectors
+                    'button[aria-label*="load"], button[aria-label*="show"], button[aria-label*="more"]',
+                    'button[title*="load"], button[title*="show"], button[title*="more"]',
+                    'a[aria-label*="load"], a[aria-label*="show"], a[aria-label*="more"]',
+                    'a[title*="load"], a[title*="show"], a[title*="more"]',
+                    
+                    // Class-based patterns (most common)
+                    '[class*="load-more"], [class*="show-more"], [class*="view-more"]',
+                    '[class*="load_more"], [class*="show_more"], [class*="view_more"]',
+                    '[class*="loadmore"], [class*="showmore"], [class*="viewmore"]',
+                    '[class*="more-btn"], [class*="more-button"], [class*="btn-more"]',
+                    '[class*="load-btn"], [class*="load-button"], [class*="btn-load"]',
+                    '[class*="expand"], [class*="continue"], [class*="next"]',
+                    '[class*="see-all"], [class*="view-all"], [class*="show-all"]',
+                    
+                    // ID-based patterns
+                    '#load-more, #show-more, #view-more, #see-more',
+                    '#loadmore, #showmore, #viewmore, #seemore',
+                    '#load_more, #show_more, #view_more, #see_more',
+                    '#more-button, #more-btn, #load-button, #load-btn',
+                    
+                    // Data attribute patterns
+                    '[data-load], [data-more], [data-show], [data-view]',
+                    '[data-load-more], [data-show-more], [data-view-more]',
+                    '[data-action*="load"], [data-action*="more"], [data-action*="show"]',
+                    '[data-behavior*="load"], [data-behavior*="more"], [data-behavior*="expand"]',
+                    '[data-testid*="load"], [data-testid*="more"], [data-testid*="show"]',
+                    '[data-qa*="load"], [data-qa*="more"], [data-cy*="load"], [data-cy*="more"]',
+                    
+                    // Pagination patterns
+                    '.pagination a:last-child, .pager a:last-child, .paginate a:last-child',
+                    'a[rel="next"], button[rel="next"], [rel="next"]',
+                    '.next-page, .page-next, .pagination-next',
+                    
+                    // Generic button/link patterns (filtered by text)
+                    'button[type="button"], button:not([type]), button[type="submit"]',
+                    'a[href], a[href*="#"], a[onclick]',
+                    '[role="button"], [onclick], [onmousedown]',
+                    'input[type="button"], input[type="submit"]',
+                    
+                    // Modern framework patterns
+                    '[ng-click], [v-on\\:click], [@click]', // Angular, Vue
+                    '[data-reactid] button, [data-react-] button', // React
+                    
+                    // Site-specific patterns (popular sites)
+                    '.morelink', // Hacker News
+                    '.load-more-posts', '.show-more-posts', // Blog platforms
+                    '.view-more-items', '.show-more-items', // E-commerce
+                    '.expand-thread', '.show-replies', // Forums/Social
+                    '.load-older, .load-newer', // Timeline patterns
+                ];
+                
+                // PHASE 2: Comprehensive text patterns (multi-language + variations)
+                const loadMoreTexts = [
+                    // English - Core patterns
+                    /\\b(load|show|view|see|get|fetch|bring)\\s+(more|additional|extra|other)\\b/i,
+                    /\\b(more|additional|extra|further|other)\\s+(items|results|content|posts|data|entries)\\b/i,
+                    /\\b(load|show|view|see)\\s+(all|everything|full|complete)\\b/i,
+                    
+                    // English - Action patterns  
+                    /\\b(continue|expand|extend|reveal|display|open)\\b/i,
+                    /\\b(next|older|newer|previous)\\b/i,
+                    /\\bread\\s+more\\b/i,
+                    /\\bview\\s+full\\s+(list|content|article)\\b/i,
+                    
+                    // English - Numeric patterns
+                    /\\b(load|show|view)\\s+(next\\s+)?\\d+\\s+(more|items|results)?\\b/i,
+                    /\\b\\d+\\s+more\\s+(items|results|posts|entries)\\b/i,
+                    
+                    // English - Symbol patterns
+                    /more\\s*[→▼⬇↓]/i,
+                    /[→▼⬇↓]\\s*more/i,
+                    /\\.\\.\\./,
+                    /show\\s*[→▼⬇↓]/i,
+                    
+                    // Spanish
+                    /\\b(ver|mostrar|cargar|obtener)\\s+(más|todo|completo)\\b/i,
+                    /\\bmás\\s+(resultados|contenido|elementos|entradas)\\b/i,
+                    /\\bcontinuar\\b/i,
+                    
+                    // French
+                    /\\b(voir|afficher|charger)\\s+(plus|tout|complet)\\b/i,
+                    /\\bplus\\s+de\\s+(résultats|contenu|éléments)\\b/i,
+                    /\\bcontinuer\\b/i,
+                    
+                    // German
+                    /\\b(mehr|weitere|alle)\\s+(laden|anzeigen|sehen)\\b/i,
+                    /\\b(laden|anzeigen)\\s+(mehr|weitere|alle)\\b/i,
+                    /\\bweiter\\b/i,
+                    
+                    // Italian
+                    /\\b(vedi|mostra|carica)\\s+(più|altro|tutti)\\b/i,
+                    /\\bpiù\\s+(risultati|contenuto|elementi)\\b/i,
+                    
+                    // Portuguese
+                    /\\b(ver|mostrar|carregar)\\s+(mais|tudo|todos)\\b/i,
+                    /\\bmais\\s+(resultados|conteúdo|itens)\\b/i,
+                    
+                    // Dutch
+                    /\\b(meer|alle)\\s+(laden|tonen|bekijken)\\b/i,
+                    /\\b(laden|tonen)\\s+(meer|alle)\\b/i,
+                    
+                    // Russian (in Latin script approximation)
+                    /\\b(pokazat|zagruzit)\\s+(bolshe|vse)\\b/i,
+                    
+                    // Japanese (romanized common terms)
+                    /\\b(motto|zenbu|tsuzuki)\\b/i,
+                    
+                    // Fallback single words (when combined with element analysis)
+                    /^(more|load|show|view|see|next|continue|expand|all|everything|full)$/i,
+                ];
+                
+                // PHASE 3: Enhanced content change detection metrics
+                function getContentMetrics() {{
+                    return {{
+                        textLength: document.body.innerText.length,
+                        elementCount: document.querySelectorAll('*').length,
+                        imageCount: document.querySelectorAll('img').length,
+                        linkCount: document.querySelectorAll('a').length,
+                        scrollHeight: document.body.scrollHeight,
+                        visibleElements: document.querySelectorAll('[style*="display"][style*="block"], [style*="display"][style*="inline"], :not([style*="display: none"]):not([hidden])').length
+                    }};
+                }}
+                
+                // PHASE 4: Advanced element validation
+                function isValidLoadMoreElement(element) {{
+                    // Basic visibility and interaction checks
+                    const isVisible = element.offsetParent !== null && 
+                                    !element.hidden && 
+                                    element.style.display !== 'none' && 
+                                    element.style.visibility !== 'hidden';
+                    
+                    if (!isVisible) return false;
+                    
+                    // Check if element is actually clickable
+                    const isClickable = element.tagName === 'A' || 
+                                      element.tagName === 'BUTTON' ||
+                                      element.tagName === 'INPUT' ||
+                                      element.hasAttribute('onclick') || 
+                                      element.hasAttribute('ng-click') ||
+                                      element.hasAttribute('v-on:click') ||
+                                      element.hasAttribute('@click') ||
+                                      element.style.cursor === 'pointer' ||
+                                      element.getAttribute('role') === 'button' ||
+                                      element.classList.contains('btn') ||
+                                      element.classList.contains('button');
+                    
+                    if (!isClickable) return false;
+                    
+                    // Check if element is enabled
+                    const isEnabled = !element.disabled && 
+                                    !element.hasAttribute('disabled') && 
+                                    !element.classList.contains('disabled') &&
+                                    !element.classList.contains('inactive') &&
+                                    !element.ariaDisabled;
+                    
+                    if (!isEnabled) return false;
+                    
+                    // Avoid navigation elements
+                    const isNotNavigation = !element.closest('nav, .nav, .navigation, header, footer, .header, .footer, .navbar, .topbar, .sidebar, .breadcrumb');
+                    
+                    if (!isNotNavigation) return false;
+                    
+                    // Check element position (avoid elements that are off-screen or tiny)
+                    const rect = element.getBoundingClientRect();
+                    const hasSize = rect.width > 10 && rect.height > 10;
+                    
+                    if (!hasSize) return false;
+                    
+                    // Additional heuristics for better detection
+                    const hasGoodPosition = rect.top < window.innerHeight * 2; // Not too far down
+                    
+                    return hasGoodPosition;
+                }}
+                
+                // PHASE 5: Main detection and clicking loop
+                while (attempts < maxAttempts) {{
+                    attempts++;
+                    let clicked = false;
+                    let initialMetrics = getContentMetrics();
+                    
+                    console.log(`🔍 Load more attempt ${{attempts}}/${{maxAttempts}} - Initial content metrics:`, initialMetrics);
+                    
+                    // Try each selector with enhanced validation
+                    for (const selector of loadMoreSelectors) {{
+                        if (clicked) break;
+                        
+                        try {{
+                            const elements = document.querySelectorAll(selector);
+                            console.log(`🔍 Trying selector "${{selector}}" - found ${{elements.length}} elements`);
+                            
+                            for (const element of elements) {{
+                                if (clicked) break;
+                                
+                                // Enhanced text extraction from multiple sources
+                                const elementText = [
+                                    element.textContent?.trim(),
+                                    element.getAttribute('aria-label'),
+                                    element.getAttribute('title'), 
+                                    element.getAttribute('alt'),
+                                    element.getAttribute('data-original-title'),
+                                    element.getAttribute('placeholder'),
+                                    element.value
+                                ].filter(Boolean).join(' ').toLowerCase();
+                                
+                                // Check if element text matches any pattern
+                                const matchesText = elementText && loadMoreTexts.some(pattern => pattern.test(elementText));
+                                
+                                // For generic selectors, require text match. For specific selectors, allow without text match
+                                const isSpecificSelector = selector.includes('load') || selector.includes('more') || 
+                                                          selector.includes('show') || selector.includes('view') ||
+                                                          selector.startsWith('#') || selector.includes('[data-');
+                                
+                                const shouldClick = (isSpecificSelector || matchesText) && isValidLoadMoreElement(element);
+                                
+                                if (shouldClick) {{
+                                    console.log(`🎯 Found valid load more element:`, {{
+                                        selector: selector,
+                                        text: elementText.substring(0, 100),
+                                        tagName: element.tagName,
+                                        classes: element.className,
+                                        id: element.id
+                                    }});
+                                    
+                                    // Enhanced element interaction
+                                    try {{
+                                        // Scroll element into view with better positioning
+                                        element.scrollIntoView({{ 
+                                            behavior: 'smooth', 
+                                            block: 'center',
+                                            inline: 'center'
+                                        }});
+                                        
+                                        // Wait for scroll to complete
+                                        await new Promise(resolve => setTimeout(resolve, 800));
+                                        
+                                        // Try multiple interaction methods
+                                        let interactionSuccess = false;
+                                        
+                                        // Method 1: Standard click
+                                        try {{
+                                            element.click();
+                                            interactionSuccess = true;
+                                        }} catch (e) {{
+                                            console.log('Standard click failed, trying alternatives');
+                                        }}
+                                        
+                                        // Method 2: Mouse event simulation
+                                        if (!interactionSuccess) {{
+                                            try {{
+                                                const mouseEvent = new MouseEvent('click', {{
+                                                    view: window,
+                                                    bubbles: true,
+                                                    cancelable: true
+                                                }});
+                                                element.dispatchEvent(mouseEvent);
+                                                interactionSuccess = true;
+                                            }} catch (e) {{
+                                                console.log('Mouse event click failed');
+                                            }}
+                                        }}
+                                        
+                                        // Method 3: Focus and Enter/Space key
+                                        if (!interactionSuccess && element.focus) {{
+                                            try {{
+                                                element.focus();
+                                                const keyEvent = new KeyboardEvent('keydown', {{
+                                                    key: element.tagName === 'A' ? 'Enter' : 'Space',
+                                                    keyCode: element.tagName === 'A' ? 13 : 32,
+                                                    bubbles: true
+                                                }});
+                                                element.dispatchEvent(keyEvent);
+                                                interactionSuccess = true;
+                                            }} catch (e) {{
+                                                console.log('Keyboard event failed');
+                                            }}
+                                        }}
+                                        
+                                        if (interactionSuccess) {{
+                                            clicked = true;
+                                            totalClicked++;
+                                            console.log(`✅ Successfully interacted with load more element (attempt ${{attempts}})`);
+                                            
+                                            // Enhanced wait with progress indication
+                                            console.log(`⏳ Waiting ${{waitTime / 1000}}s for content to load...`);
+                                            await new Promise(resolve => setTimeout(resolve, waitTime));
+                                            
+                                            break;
+                                        }} else {{
+                                            console.log('❌ All interaction methods failed for this element');
+                                        }}
+                                        
+                                    }} catch (interactionError) {{
+                                        console.log('⚠️ Interaction error:', interactionError);
+                                    }}
+                                }}
+                            }}
+                        }} catch (selectorError) {{
+                            console.log(`⚠️ Error with selector "${{selector}}":`, selectorError);
+                        }}
+                    }}
+                    
+                    if (clicked) {{
+                        // Enhanced content change verification
+                        await new Promise(resolve => setTimeout(resolve, 500)); // Additional settling time
+                        let newMetrics = getContentMetrics();
+                        
+                        console.log('📊 Content metrics after click:', newMetrics);
+                        
+                        {f'''
+                        const contentIncreased = newMetrics.textLength > initialMetrics.textLength ||
+                                              newMetrics.elementCount > initialMetrics.elementCount ||
+                                              newMetrics.imageCount > initialMetrics.imageCount ||
+                                              newMetrics.linkCount > initialMetrics.linkCount ||
+                                              newMetrics.scrollHeight > initialMetrics.scrollHeight;
+                        
+                        if (contentIncreased) {{
+                            const textDiff = newMetrics.textLength - initialMetrics.textLength;
+                            const elementDiff = newMetrics.elementCount - initialMetrics.elementCount;
+                            console.log(`✅ Content change detected! Text: +${{textDiff}} chars, Elements: +${{elementDiff}}, Images: +${{newMetrics.imageCount - initialMetrics.imageCount}}`);
+                        }} else {{
+                            console.log('⚠️ No content change detected after click - element may still be loading');
+                        }}
+                        ''' if load_more_config.verify_content_change else ''}
+                        
+                        // Scroll to reveal any new content
+                        window.scrollTo(0, document.body.scrollHeight);
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        
+                    }} else {{
+                        console.log(`❌ Attempt ${{attempts}} - No valid load more element found with ${{loadMoreSelectors.length}} selectors`);
+                        break; // No more elements found, exit loop
+                    }}
+                }}
+                
+                console.log(`🏁 Load more process completed: ${{totalClicked}} elements clicked in ${{attempts}} attempts`);
+                return {{ clicked: totalClicked, attempts: attempts }};
+            }}
+            
+            return clickLoadMore();
+        }})();
+        """
+
+        js_commands.append(load_more_script)
+        return js_commands
+
     def _get_optimized_crawler_config(
-        self, bypass_cache: bool = False
+        self,
+        bypass_cache: bool = False,
+        load_more_config: Optional[LoadMoreConfig] = None,
     ) -> CrawlerRunConfig:
-        """Get optimized crawler configuration for maximum performance."""
+        """Get optimized crawler configuration for maximum performance with optional load more."""
         cache_mode = CacheMode.BYPASS if bypass_cache else CacheMode.ENABLED
 
-        return CrawlerRunConfig(
-            cache_mode=cache_mode,
-            wait_until="domcontentloaded",  # Fastest wait strategy (vs "load")
-            delay_before_return_html=0.5,  # Zero delay for maximum speed
-            word_count_threshold=1,  # Lower threshold for faster processing
-            process_iframes=False,  # Skip iframe processing
-            remove_overlay_elements=True,  # Remove popups/modals quickly
-            # excluded_tags=["script", "style", "nav", "header", "footer", "aside"],  # Skip non-content
-            only_text=False,  # Keep some structure for links
-            ignore_body_visibility=True,  # Skip visibility checks
-            # excluded_selector="#ads, .advertisement, .social-media, .sidebar",  # Skip common clutter
-            simulate_user=False,  # Skip user simulation for speed
-            override_navigator=False,  # Skip navigator override
-        )
+        base_config = {
+            "cache_mode": cache_mode,
+            "wait_until": "domcontentloaded",  # Fastest wait strategy (vs "load")
+            "delay_before_return_html": 0.5,  # Delay for content to settle
+            "word_count_threshold": 1,  # Lower threshold for faster processing
+            "process_iframes": False,  # Skip iframe processing
+            "remove_overlay_elements": True,  # Remove popups/modals quickly
+            "only_text": False,  # Keep some structure for links
+            "ignore_body_visibility": True,  # Skip visibility checks
+            "simulate_user": False,  # Skip user simulation for speed
+            "override_navigator": False,  # Skip navigator override
+        }
+
+        # Add load more functionality if enabled
+        if load_more_config and load_more_config.enabled:
+            base_config["js_code"] = self._get_load_more_js_code(load_more_config)
+            # Increase delay to allow load more content to load
+            base_config["delay_before_return_html"] = max(
+                0.5, load_more_config.wait_time
+            )
+
+        return CrawlerRunConfig(**base_config)
 
     async def crawl_single_url(
-        self, url: str, bypass_cache: bool = False
+        self,
+        url: str,
+        bypass_cache: bool = False,
+        load_more_config: Optional[LoadMoreConfig] = None,
     ) -> Tuple[str, str, List[str]]:
-        """Crawl a single URL with optimized performance configuration."""
+        """Crawl a single URL with optimized performance configuration and optional load more."""
         start_time = time.time()
 
         try:
             # Use optimized configurations
             browser_config = self._get_optimized_browser_config()
-            crawler_config = self._get_optimized_crawler_config(bypass_cache)
+            crawler_config = self._get_optimized_crawler_config(
+                bypass_cache, load_more_config
+            )
+
+            load_more_info = ""
+            if load_more_config and load_more_config.enabled:
+                load_more_info = f" (LOAD MORE: max_attempts={load_more_config.max_attempts}, wait={load_more_config.wait_time}s)"
 
             async with AsyncWebCrawler(config=browser_config) as crawler:
                 result = await crawler.arun(url=url, config=crawler_config)
@@ -466,7 +869,7 @@ class WebCrawlerTool(Toolkit):
 
                 crawl_time = time.time() - start_time
                 print(
-                    f"⚡ Crawled {url} in {crawl_time:.2f}s ({'FRESH' if bypass_cache else 'CACHED'}) - {len(content)} chars"
+                    f"⚡ Crawled {url} in {crawl_time:.2f}s ({'FRESH' if bypass_cache else 'CACHED'}){load_more_info} - {len(content)} chars"
                 )
 
                 return url, content, links
@@ -650,30 +1053,38 @@ class WebCrawlerTool(Toolkit):
             output.append(
                 f"🗺️ From sitemap discovery ({len(sitemap_data)} domains, {total_sitemap_urls} URLs found):"
             )
-            
+
             # Limit to top 200 URLs total across all domains
             url_count = 0
             max_urls = 200
-            
+
             for i, (base_domain, urls) in enumerate(sitemap_data, 1):
                 remaining_slots = max_urls - url_count
                 if remaining_slots <= 0:
-                    output.append(f"  ... and {len(sitemap_data) - i + 1} more domains with URLs truncated due to 200 URL limit")
+                    output.append(
+                        f"  ... and {len(sitemap_data) - i + 1} more domains with URLs truncated due to 200 URL limit"
+                    )
                     break
-                
+
                 urls_to_show = urls[:remaining_slots]
                 if len(urls) > len(urls_to_show):
-                    output.append(f"  [{base_domain}] {len(urls_to_show)} URLs shown (of {len(urls)} total):")
+                    output.append(
+                        f"  [{base_domain}] {len(urls_to_show)} URLs shown (of {len(urls)} total):"
+                    )
                 else:
-                    output.append(f"  [{base_domain}] {len(urls_to_show)} URLs discovered:")
-                
+                    output.append(
+                        f"  [{base_domain}] {len(urls_to_show)} URLs discovered:"
+                    )
+
                 # Show URLs up to the limit
                 for j, url in enumerate(urls_to_show, 1):
                     output.append(f"    {j}. {url}")
                     url_count += 1
-                
+
                 if len(urls) > len(urls_to_show):
-                    output.append(f"    ... and {len(urls) - len(urls_to_show)} more URLs truncated")
+                    output.append(
+                        f"    ... and {len(urls) - len(urls_to_show)} more URLs truncated"
+                    )
                 output.append("")
 
         # Format base page content (fallback) with source attribution
@@ -766,13 +1177,14 @@ class WebCrawlerTool(Toolkit):
         Crawl specific URLs selected by the agent after site structure discovery.
 
         Always gets fresh content (bypasses cache) to ensure up-to-date information.
+        Automatically detects and clicks "load more" buttons to gather maximum content.
 
         Args:
             urls: URL(s) to crawl - can be a single string or list of strings
                  (e.g., "https://site.com/docs" or ["https://site.com/docs", "https://site.com/faq"])
 
         Returns:
-            str: Formatted content from crawled pages
+            str: Formatted content from crawled pages, including all additional loaded content
         """
         try:
             # Fix input type handling - ensure urls is always a list
@@ -799,22 +1211,33 @@ class WebCrawlerTool(Toolkit):
             if not url_list:
                 return "❌ No valid URLs provided"
 
-            print(f"🔍 Crawling {len(url_list)} selected URLs... (FRESH content)")
+            # Always enable load more with optimal hardcoded settings
+            load_more_config = LoadMoreConfig(
+                enabled=True,
+                max_attempts=3,  # Optimal balance of thoroughness vs performance
+                wait_time=2.5,   # Slightly longer wait for better compatibility
+                scroll_before_click=True,
+                verify_content_change=True,
+                custom_selectors=None  # Generalized selectors handle most cases
+            )
+            
+            print(f"🔍 Crawling {len(url_list)} selected URLs with automatic LOAD MORE detection... (FRESH content)")
+            print(f"🔄 Load more: max_attempts=3, wait_time=2.5s (optimized for maximum content)")
 
-            # Handle async crawling properly - always bypass cache for content
+            # Handle async crawling with load more always enabled
             try:
                 loop = asyncio.get_running_loop()
                 import concurrent.futures
 
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
-                        self._run_simple_crawling, url_list, True
-                    )  # Always bypass cache
+                        self._run_load_more_crawling, url_list, load_more_config
+                    )
                     results = future.result()
             except RuntimeError:
                 results = asyncio.run(
-                    self._crawl_multiple_urls(url_list, True)
-                )  # Always bypass cache
+                    self._crawl_multiple_urls_with_load_more(url_list, load_more_config)
+                )
 
             return self._format_results(results)
 
@@ -950,6 +1373,145 @@ class WebCrawlerTool(Toolkit):
 
         output.append(f"Total unique links discovered: {total_links}")
         return "\n".join(output)
+
+    def crawl_with_load_more(
+        self,
+        urls,
+        max_attempts: int = 3,
+        wait_time: float = 2.0,
+        custom_selectors: List[str] = None,
+    ) -> str:
+        """
+        Crawl URLs with automatic "load more" functionality enabled.
+
+        This method automatically detects and clicks "load more" buttons/links to gather
+        more content from pages with infinite scroll or paginated content.
+
+        Args:
+            urls: URL(s) to crawl with load more - can be string or list of strings
+            max_attempts: Maximum number of "load more" clicks to attempt (default: 3)
+            wait_time: Seconds to wait between attempts and after clicking (default: 2.0)
+            custom_selectors: Additional CSS selectors for site-specific "load more" elements
+
+        Returns:
+            str: Formatted content from crawled pages including loaded additional content
+        """
+        try:
+            # Fix input type handling - ensure urls is always a list
+            if isinstance(urls, str):
+                urls = [urls]
+            elif not isinstance(urls, (list, tuple)):
+                try:
+                    urls = list(urls)
+                except TypeError:
+                    urls = [str(urls)]
+
+            # Validate URLs
+            url_list = []
+            for url in urls:
+                url = url.strip()
+                if url:
+                    validated_url = self._ensure_valid_url(url)
+                    if validated_url and self.is_allowed_domain(validated_url):
+                        url_list.append(validated_url)
+
+            if not url_list:
+                return "❌ No valid URLs provided"
+
+            # Create load more configuration
+            load_more_config = LoadMoreConfig(
+                enabled=True,
+                max_attempts=max_attempts,
+                wait_time=wait_time,
+                scroll_before_click=True,
+                verify_content_change=True,
+                custom_selectors=custom_selectors,
+            )
+
+            print(
+                f"🔄 Crawling {len(url_list)} URLs with load more functionality (max_attempts={max_attempts}, wait_time={wait_time}s)"
+            )
+
+            # Handle async crawling with load more
+            try:
+                loop = asyncio.get_running_loop()
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        self._run_load_more_crawling, url_list, load_more_config
+                    )
+                    results = future.result()
+            except RuntimeError:
+                results = asyncio.run(
+                    self._crawl_multiple_urls_with_load_more(url_list, load_more_config)
+                )
+
+            return self._format_results(results)
+
+        except Exception as e:
+            return f"❌ Error in crawl_with_load_more: {str(e)}"
+
+    def _run_load_more_crawling(self, urls, load_more_config):
+        """Helper method to run load more crawling in a new event loop."""
+        return asyncio.run(
+            self._crawl_multiple_urls_with_load_more(urls, load_more_config)
+        )
+
+    async def _crawl_multiple_urls_with_load_more(
+        self, urls: List[str], load_more_config: LoadMoreConfig
+    ) -> List[Tuple[str, str, List[str]]]:
+        """Crawl multiple URLs with load more functionality."""
+        if not urls:
+            return []
+
+        start_time = time.time()
+        max_concurrent = min(
+            len(urls), 3
+        )  # Lower concurrency for load more (more intensive)
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        print(
+            f"🔄 Starting load more crawl of {len(urls)} URLs with {max_concurrent} concurrent workers"
+        )
+
+        async def crawl_with_load_more_and_concurrency_limit(
+            url: str,
+        ) -> Tuple[str, str, List[str]]:
+            """Crawl a single URL with load more and concurrency limiting."""
+            async with semaphore:
+                return await self.crawl_single_url(
+                    url, bypass_cache=True, load_more_config=load_more_config
+                )
+
+        # Create tasks for all URLs
+        tasks = [crawl_with_load_more_and_concurrency_limit(url) for url in urls]
+
+        # Execute with asyncio.gather for parallel execution
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Process results
+        processed_results = []
+        successful_crawls = 0
+        failed_crawls = 0
+
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                processed_results.append((urls[i], f"Exception: {str(result)}", []))
+                failed_crawls += 1
+                print(f"❌ Failed to crawl with load more {urls[i]}: {str(result)}")
+            else:
+                processed_results.append(result)
+                successful_crawls += 1
+
+        total_time = time.time() - start_time
+        avg_time_per_url = total_time / len(urls) if urls else 0
+
+        print(
+            f"🔄 Completed load more crawl batch: {successful_crawls} successful, {failed_crawls} failed in {total_time:.2f}s (avg {avg_time_per_url:.2f}s per URL)"
+        )
+
+        return processed_results
 
     # ========== PDF PROCESSING METHODS ==========
 
