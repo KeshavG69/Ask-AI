@@ -76,14 +76,6 @@
         "documentation": {}
     },
     {
-        "label": "WebCrawlerTool",
-        "importPath": "tool",
-        "description": "tool",
-        "isExtraImport": true,
-        "detail": "tool",
-        "documentation": {}
-    },
-    {
         "label": "ReasoningTools",
         "importPath": "agno.tools.reasoning",
         "description": "agno.tools.reasoning",
@@ -148,6 +140,30 @@
         "documentation": {}
     },
     {
+        "label": "Dict",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Any",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Union",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
         "label": "AsyncGenerator",
         "importPath": "typing",
         "description": "typing",
@@ -189,6 +205,14 @@
     },
     {
         "label": "Dict",
+        "importPath": "typing",
+        "description": "typing",
+        "isExtraImport": true,
+        "detail": "typing",
+        "documentation": {}
+    },
+    {
+        "label": "Optional",
         "importPath": "typing",
         "description": "typing",
         "isExtraImport": true,
@@ -310,6 +334,22 @@
         "documentation": {}
     },
     {
+        "label": "Depends",
+        "importPath": "fastapi",
+        "description": "fastapi",
+        "isExtraImport": true,
+        "detail": "fastapi",
+        "documentation": {}
+    },
+    {
+        "label": "HTTPException",
+        "importPath": "fastapi",
+        "description": "fastapi",
+        "isExtraImport": true,
+        "detail": "fastapi",
+        "documentation": {}
+    },
+    {
         "label": "FastAPI",
         "importPath": "fastapi",
         "description": "fastapi",
@@ -358,6 +398,22 @@
         "documentation": {}
     },
     {
+        "label": "_content_moderator",
+        "importPath": "moderation",
+        "description": "moderation",
+        "isExtraImport": true,
+        "detail": "moderation",
+        "documentation": {}
+    },
+    {
+        "label": "OpenAI",
+        "importPath": "openai",
+        "description": "openai",
+        "isExtraImport": true,
+        "detail": "openai",
+        "documentation": {}
+    },
+    {
         "label": "CORSMiddleware",
         "importPath": "fastapi.middleware.cors",
         "description": "fastapi.middleware.cors",
@@ -383,19 +439,53 @@
         "documentation": {}
     },
     {
-        "label": "AsyncWebCrawler",
-        "importPath": "crawl4ai",
-        "description": "crawl4ai",
+        "label": "re",
+        "kind": 6,
         "isExtraImport": true,
-        "detail": "crawl4ai",
+        "importPath": "re",
+        "description": "re",
+        "detail": "re",
         "documentation": {}
     },
     {
-        "label": "CrawlerRunConfig",
-        "importPath": "crawl4ai",
-        "description": "crawl4ai",
+        "label": "xml.etree.ElementTree",
+        "kind": 6,
         "isExtraImport": true,
-        "detail": "crawl4ai",
+        "importPath": "xml.etree.ElementTree",
+        "description": "xml.etree.ElementTree",
+        "detail": "xml.etree.ElementTree",
+        "documentation": {}
+    },
+    {
+        "label": "urljoin",
+        "importPath": "urllib.parse",
+        "description": "urllib.parse",
+        "isExtraImport": true,
+        "detail": "urllib.parse",
+        "documentation": {}
+    },
+    {
+        "label": "urlparse",
+        "importPath": "urllib.parse",
+        "description": "urllib.parse",
+        "isExtraImport": true,
+        "detail": "urllib.parse",
+        "documentation": {}
+    },
+    {
+        "label": "dataclass",
+        "importPath": "dataclasses",
+        "description": "dataclasses",
+        "isExtraImport": true,
+        "detail": "dataclasses",
+        "documentation": {}
+    },
+    {
+        "label": "Toolkit",
+        "importPath": "agno.tools",
+        "description": "agno.tools",
+        "isExtraImport": true,
+        "detail": "agno.tools",
         "documentation": {}
     },
     {
@@ -444,64 +534,6 @@
         "description": "crawl4ai.processors.pdf",
         "isExtraImport": true,
         "detail": "crawl4ai.processors.pdf",
-        "documentation": {}
-    },
-    {
-        "label": "PDFCrawlerStrategy",
-        "importPath": "crawl4ai.processors.pdf",
-        "description": "crawl4ai.processors.pdf",
-        "isExtraImport": true,
-        "detail": "crawl4ai.processors.pdf",
-        "documentation": {}
-    },
-    {
-        "label": "PDFContentScrapingStrategy",
-        "importPath": "crawl4ai.processors.pdf",
-        "description": "crawl4ai.processors.pdf",
-        "isExtraImport": true,
-        "detail": "crawl4ai.processors.pdf",
-        "documentation": {}
-    },
-    {
-        "label": "re",
-        "kind": 6,
-        "isExtraImport": true,
-        "importPath": "re",
-        "description": "re",
-        "detail": "re",
-        "documentation": {}
-    },
-    {
-        "label": "xml.etree.ElementTree",
-        "kind": 6,
-        "isExtraImport": true,
-        "importPath": "xml.etree.ElementTree",
-        "description": "xml.etree.ElementTree",
-        "detail": "xml.etree.ElementTree",
-        "documentation": {}
-    },
-    {
-        "label": "urljoin",
-        "importPath": "urllib.parse",
-        "description": "urllib.parse",
-        "isExtraImport": true,
-        "detail": "urllib.parse",
-        "documentation": {}
-    },
-    {
-        "label": "urlparse",
-        "importPath": "urllib.parse",
-        "description": "urllib.parse",
-        "isExtraImport": true,
-        "detail": "urllib.parse",
-        "documentation": {}
-    },
-    {
-        "label": "Toolkit",
-        "importPath": "agno.tools",
-        "description": "agno.tools",
-        "isExtraImport": true,
-        "detail": "agno.tools",
         "documentation": {}
     },
     {
@@ -626,7 +658,7 @@
         "kind": 6,
         "importPath": "app",
         "description": "app",
-        "peekOfCode": "class ChatRequest(BaseModel):\n    urls: List[str]\n    query: str\n    session_id: str\n    company_name: str\n    api_key: str\nasync def stream_chat_response(\n    query: str,\n    agent: Agent,\n) -> AsyncGenerator:",
+        "peekOfCode": "class ChatRequest(BaseModel):\n    urls: List[str]\n    query: str\n    session_id: str\n    company_name: str\n    api_key: str\n# Content moderation verification function\nasync def verify_chat_request(request: ChatRequest):\n    \"\"\"Verify user query in ChatRequest.\"\"\"\n    if request.query:",
         "detail": "app",
         "documentation": {}
     },
@@ -635,7 +667,7 @@
         "kind": 5,
         "importPath": "app",
         "description": "app",
-        "peekOfCode": "logger = logging.getLogger(__name__)\nrouter = APIRouter(tags=[\"chat_agents\"])\n# Request Schema\nclass ChatRequest(BaseModel):\n    urls: List[str]\n    query: str\n    session_id: str\n    company_name: str\n    api_key: str\nasync def stream_chat_response(",
+        "peekOfCode": "logger = logging.getLogger(__name__)\nrouter = APIRouter(tags=[\"chat_agents\"])\n# Request Schema\nclass ChatRequest(BaseModel):\n    urls: List[str]\n    query: str\n    session_id: str\n    company_name: str\n    api_key: str\n# Content moderation verification function",
         "detail": "app",
         "documentation": {}
     },
@@ -644,8 +676,35 @@
         "kind": 5,
         "importPath": "app",
         "description": "app",
-        "peekOfCode": "router = APIRouter(tags=[\"chat_agents\"])\n# Request Schema\nclass ChatRequest(BaseModel):\n    urls: List[str]\n    query: str\n    session_id: str\n    company_name: str\n    api_key: str\nasync def stream_chat_response(\n    query: str,",
+        "peekOfCode": "router = APIRouter(tags=[\"chat_agents\"])\n# Request Schema\nclass ChatRequest(BaseModel):\n    urls: List[str]\n    query: str\n    session_id: str\n    company_name: str\n    api_key: str\n# Content moderation verification function\nasync def verify_chat_request(request: ChatRequest):",
         "detail": "app",
+        "documentation": {}
+    },
+    {
+        "label": "ContentModerator",
+        "kind": 6,
+        "importPath": "moderation",
+        "description": "moderation",
+        "peekOfCode": "class ContentModerator:\n    \"\"\"Utility class for content moderation using OpenAI's Moderation API.\"\"\"\n    def __init__(self, api_key=None):\n        \"\"\"Initialize with API key from environment if not provided.\"\"\"\n        self.client = OpenAI(api_key=api_key or os.getenv(\"OPENAI_API_KEY\"))\n    async def check_content(\n        self,\n        content: str,\n        model: str = \"omni-moderation-latest\",\n        return_scores: bool = False,",
+        "detail": "moderation",
+        "documentation": {}
+    },
+    {
+        "label": "logger",
+        "kind": 5,
+        "importPath": "moderation",
+        "description": "moderation",
+        "peekOfCode": "logger = logging.getLogger(__name__)\nclass ContentModerator:\n    \"\"\"Utility class for content moderation using OpenAI's Moderation API.\"\"\"\n    def __init__(self, api_key=None):\n        \"\"\"Initialize with API key from environment if not provided.\"\"\"\n        self.client = OpenAI(api_key=api_key or os.getenv(\"OPENAI_API_KEY\"))\n    async def check_content(\n        self,\n        content: str,\n        model: str = \"omni-moderation-latest\",",
+        "detail": "moderation",
+        "documentation": {}
+    },
+    {
+        "label": "_content_moderator",
+        "kind": 5,
+        "importPath": "moderation",
+        "description": "moderation",
+        "peekOfCode": "_content_moderator = ContentModerator()",
+        "detail": "moderation",
         "documentation": {}
     },
     {
@@ -667,57 +726,12 @@
         "documentation": {}
     },
     {
-        "label": "test_single_pdf",
-        "kind": 2,
-        "importPath": "test_pdf_tool",
-        "description": "test_pdf_tool",
-        "peekOfCode": "def test_single_pdf():\n    \"\"\"Test processing a single PDF URL.\"\"\"\n    print(\"=\" * 60)\n    print(\"TEST 1: Processing a single PDF URL\")\n    print(\"=\" * 60)\n    # Initialize the WebCrawlerTool\n    tool = WebCrawlerTool()\n    # Test with a single PDF URL (arXiv paper)\n    pdf_url = \"https://arxiv.org/pdf/2310.06825.pdf\"\n    print(f\"Processing PDF: {pdf_url}\")",
-        "detail": "test_pdf_tool",
-        "documentation": {}
-    },
-    {
-        "label": "test_multiple_pdfs",
-        "kind": 2,
-        "importPath": "test_pdf_tool",
-        "description": "test_pdf_tool",
-        "peekOfCode": "def test_multiple_pdfs():\n    \"\"\"Test processing multiple PDF URLs.\"\"\"\n    print(\"\\n\" + \"=\" * 60)\n    print(\"TEST 2: Processing multiple PDF URLs\")\n    print(\"=\" * 60)\n    # Initialize the WebCrawlerTool\n    tool = WebCrawlerTool()\n    # Test with multiple PDF URLs\n    pdf_urls = [\n        \"https://arxiv.org/pdf/2310.06825.pdf\",  # Machine Learning paper",
-        "detail": "test_pdf_tool",
-        "documentation": {}
-    },
-    {
-        "label": "test_invalid_pdf_url",
-        "kind": 2,
-        "importPath": "test_pdf_tool",
-        "description": "test_pdf_tool",
-        "peekOfCode": "def test_invalid_pdf_url():\n    \"\"\"Test handling of invalid PDF URLs.\"\"\"\n    print(\"\\n\" + \"=\" * 60)\n    print(\"TEST 3: Testing invalid PDF URL handling\")\n    print(\"=\" * 60)\n    # Initialize the WebCrawlerTool\n    tool = WebCrawlerTool()\n    # Test with non-PDF URLs\n    invalid_urls = [\n        \"https://example.com/not-a-pdf.html\",",
-        "detail": "test_pdf_tool",
-        "documentation": {}
-    },
-    {
-        "label": "test_mixed_urls",
-        "kind": 2,
-        "importPath": "test_pdf_tool",
-        "description": "test_pdf_tool",
-        "peekOfCode": "def test_mixed_urls():\n    \"\"\"Test processing a mix of valid and invalid PDF URLs.\"\"\"\n    print(\"\\n\" + \"=\" * 60)\n    print(\"TEST 4: Testing mixed valid/invalid PDF URLs\")\n    print(\"=\" * 60)\n    # Initialize the WebCrawlerTool\n    tool = WebCrawlerTool()\n    # Mix of valid and invalid URLs\n    mixed_urls = [\n        \"https://arxiv.org/pdf/2310.06825.pdf\",  # Valid PDF",
-        "detail": "test_pdf_tool",
-        "documentation": {}
-    },
-    {
-        "label": "test_pdf_url_validation",
-        "kind": 2,
-        "importPath": "test_pdf_tool",
-        "description": "test_pdf_tool",
-        "peekOfCode": "def test_pdf_url_validation():\n    \"\"\"Test the PDF URL validation function.\"\"\"\n    print(\"\\n\" + \"=\" * 60)\n    print(\"TEST 5: Testing PDF URL validation\")\n    print(\"=\" * 60)\n    # Initialize the WebCrawlerTool\n    tool = WebCrawlerTool()\n    # Test various URL patterns\n    test_urls = [\n        \"https://example.com/document.pdf\",  # Should be valid",
-        "detail": "test_pdf_tool",
-        "documentation": {}
-    },
-    {
-        "label": "main",
-        "kind": 2,
-        "importPath": "test_pdf_tool",
-        "description": "test_pdf_tool",
-        "peekOfCode": "def main():\n    \"\"\"Run all PDF processing tests.\"\"\"\n    print(\"🔬 Testing PDF Processing Capabilities of WebCrawlerTool\")\n    print(\"=\" * 80)\n    try:\n        # Run validation test first (doesn't require network)\n        test_pdf_url_validation()\n        # Run network-dependent tests\n        test_single_pdf()\n        test_multiple_pdfs()",
-        "detail": "test_pdf_tool",
+        "label": "LoadMoreConfig",
+        "kind": 6,
+        "importPath": "tool",
+        "description": "tool",
+        "peekOfCode": "class LoadMoreConfig:\n    \"\"\"Configuration for load more functionality.\"\"\"\n    enabled: bool = True\n    max_attempts: int = 3\n    wait_time: float = 2.0\n    scroll_before_click: bool = True\n    verify_content_change: bool = True\n    custom_selectors: List[str] = None\nclass WebCrawlerTool(Toolkit):\n    \"\"\"Simple web crawler tool that returns content and links for agent decision making.\"\"\"",
+        "detail": "tool",
         "documentation": {}
     },
     {

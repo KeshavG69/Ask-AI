@@ -1,6 +1,6 @@
 import logging
 import json
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from typing import List, AsyncGenerator, Optional, cast
 from uuid import UUID
@@ -9,6 +9,7 @@ from agno.agent import Agent
 from agno.run.response import RunEvent, RunResponse
 from agent import create_web_support_agent
 from simple_processor import simple_process_stream
+from moderation import _content_moderator
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -25,13 +26,26 @@ class ChatRequest(BaseModel):
     api_key: str
 
 
+# Content moderation verification function
+async def verify_chat_request(request: ChatRequest):
+    """Verify user query in ChatRequest."""
+    if request.query:
+        is_appropriate = await _content_moderator.check_content(request.query)
+        if not is_appropriate:
+            raise HTTPException(
+                status_code=400,
+                detail="Content violates our usage policies. Please modify your query.",
+            )
+    return request
+
+
 async def stream_chat_response(
     query: str,
     agent: Agent,
 ) -> AsyncGenerator:
     """
     🚀 ULTRA-FAST STREAM RESPONSE WITH BACKEND PROCESSING
-    
+
     Uses our streaming beast to process complex agno responses into clean chunks!
 
     Args:
@@ -57,16 +71,15 @@ async def stream_chat_response(
 
     except Exception as e:
         logger.error(f"❌ Error in BEAST MODE stream: {str(e)}")
-        error_chunk = {
-            "type": "error",
-            "message": str(e)
-        }
+        error_chunk = {"type": "error", "message": str(e)}
         yield f"data: {json.dumps(error_chunk)}\n\n"
         return
 
 
 @router.post("/chat")
-async def chat_agent(request: ChatRequest):
+async def chat_agent(
+    request: ChatRequest, _: ChatRequest = Depends(verify_chat_request)
+):
     """
     Chat Agent endpoint with streaming response for web content questions.
 
@@ -90,8 +103,11 @@ async def chat_agent(request: ChatRequest):
             raise HTTPException(status_code=400, detail="At least one URL is required")
         if not request.api_key or not request.api_key.strip():
             raise HTTPException(status_code=400, detail="API key is required")
-        if not request.api_key.startswith('sk-'):
-            raise HTTPException(status_code=400, detail="Invalid API key format. OpenAI API keys start with 'sk-'")
+        if not request.api_key.startswith("sk-"):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid API key format. OpenAI API keys start with 'sk-'",
+            )
 
         logger.info(f"🔍 Processing chat request for session: {request.session_id}")
         logger.info(f"📝 Query: {request.query[:100]}...")
@@ -106,20 +122,17 @@ async def chat_agent(request: ChatRequest):
 
         # Create new agent with provided URLs and API key
         agent = create_web_support_agent(
-            starting_urls=request.urls, 
+            starting_urls=request.urls,
             company_name=request.company_name,
             api_key=request.api_key,
-            session_id=request.session_id
+            session_id=request.session_id,
         )
 
         logger.info(f"✅ Agent created successfully for {len(request.urls)} URLs")
 
         # Stream the response
         return StreamingResponse(
-            stream_chat_response(
-                request.query,
-                agent
-            ),
+            stream_chat_response(request.query, agent),
             media_type="text/event-stream",
         )
 

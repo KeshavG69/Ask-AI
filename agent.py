@@ -53,7 +53,7 @@ def create_web_support_agent(
                 livecrawl="preferred",
             ),
         ],
-        description=f"You are an agent that answers user queries based exclusively on content from the starting URLs: {', '.join(starting_urls)}. The starting URLs serve only as the content source - you retrieve information from them and answer questions based on that content. You can process both web pages and PDF files from these domains.",
+        description=f"You are an agent that answers user queries based exclusively on content from the starting URLs: {', '.join(starting_urls)}.The company you are working for is {company_name}. The starting URLs serve only as the content source - you retrieve information from them and answer questions based on that content. You can process both web pages and PDF files from these domains.",
         instructions=[
             # DATA SOURCE
             f"Answer queries using ONLY content retrieved from: {', '.join(starting_urls)}",
@@ -135,6 +135,7 @@ def create_web_support_agent(
     </format_rules>
 
 """,
+            "Dont answer any question that is not related to the companies website or the content you retrieved from the websites.",
         ],
         show_tool_calls=True,
         markdown=True,
